@@ -19,6 +19,7 @@
 
 .EXAMPLE
     PS> .\build.ps1
+    PS> .\build.ps1 -Version 0.2.0
     PS> .\build.ps1 -Arch arm64
     PS> .\build.ps1 -Out build\release
 #>
@@ -28,7 +29,9 @@ param(
     [ValidateSet("amd64", "386", "arm64")]
     [string]$Arch = "amd64",
 
-    [string]$Out = "dist"
+    [string]$Out = "dist",
+
+    [string]$Version = "dev"
 )
 
 # Strict mode: stop on unhandled errors and treat unset variables as errors.
@@ -53,18 +56,11 @@ if (-not (Test-Path -Path $Out)) {
 $exePath = Join-Path -Path $Out -ChildPath "atlas-ap-remote.exe"
 Write-Host "Building $env:GOOS/$env:GOARCH -> $exePath"
 
-& go build -trimpath -ldflags "-s -w" -o $exePath ./cmd/atlas-ap-remote
+$ldflags = "-s -w -X github.com/atlas-ap/atlas-ap-remote/internal/cli.Version=$Version"
+& go build -trimpath -ldflags $ldflags -o $exePath ./cmd/atlas-ap-remote
 if ($LASTEXITCODE -ne 0) {
     throw "go build failed with exit code $LASTEXITCODE"
 }
 
-# Inject a non-empty version string so --version is informative. The
-# ldflags -X flag overrides the default "dev" set in cli.Version.
-$version = "0.1.0"
-& go build -trimpath -ldflags "-s -w -X github.com/atlas-ap/atlas-ap-remote/internal/cli.Version=$version" -o $exePath ./cmd/atlas-ap-remote
-if ($LASTEXITCODE -ne 0) {
-    throw "go build (versioned) failed with exit code $LASTEXITCODE"
-}
-
 Write-Host "Built $exePath"
-Write-Host "Version: $version"
+Write-Host "Version: $Version"

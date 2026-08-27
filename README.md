@@ -33,6 +33,9 @@ Use PowerShell 5+ on Windows 10/11 or Windows Server 2019+.
 # from the repository root
 .\build.ps1
 # -> dist\atlas-ap-remote.exe
+
+# Formal release build with an explicit version
+.\build.ps1 -Version 0.2.0
 ```
 
 To target a different architecture:
@@ -50,7 +53,7 @@ additional runtime files.
 
 ```bash
 GOOS=windows GOARCH=amd64 CGO_ENABLED=0 \
-  go build -trimpath -ldflags "-s -w -X github.com/atlas-ap/atlas-ap-remote/internal/cli.Version=0.1.0" \
+  go build -trimpath -ldflags "-s -w -X github.com/atlas-ap/atlas-ap-remote/internal/cli.Version=0.2.0" \
   -o dist/atlas-ap-remote.exe ./cmd/atlas-ap-remote
 ```
 
