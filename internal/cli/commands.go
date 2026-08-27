@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/atlas-ap/atlas-ap-remote/internal/archive"
 	apiclient "github.com/atlas-ap/atlas-ap-remote/internal/client"
 )
 
@@ -344,9 +345,99 @@ func cmdCancel(gf *globalFlags, environ []string, args []string, stdout, stderr 
 	return 0
 }
 
-// cmdDownload is wired to the archive package in Task 3. This stub keeps
-// the dispatcher complete and the build green.
+type downloadFlags struct {
+	outputDir string
+	keepZip   bool
+	jsonMode  bool
+	help      bool
+}
+
+func parseDownloadFlags(args []string, stderr io.Writer) (*downloadFlags, *flag.FlagSet, error) {
+	fs := flag.NewFlagSet("download", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	df := &downloadFlags{}
+	fs.StringVar(&df.outputDir, "output-dir", ".", "Directory to extract results into")
+	fs.BoolVar(&df.keepZip, "keep-zip", false, "Keep the downloaded ZIP file as <job-id>.zip")
+	fs.BoolVar(&df.jsonMode, "json", false, "Emit JSON envelope")
+	fs.BoolVar(&df.help, "help", false, "Show help for download")
+
+	if err := fs.Parse(args); err != nil {
+		return nil, fs, err
+	}
+	return df, fs, nil
+}
+
 func cmdDownload(gf *globalFlags, environ []string, args []string, stdout, stderr io.Writer) int {
-	fmt.Fprintf(stderr, "download: not implemented yet (wired in Task 3)\n")
-	return 2
+	df, fs, err := parseDownloadFlags(args, stderr)
+	if err != nil {
+		return 2
+	}
+
+	positional := fs.Args()
+	if df.help && len(positional) == 0 {
+		printDownloadUsage(stdout)
+		return 0
+	}
+	if len(positional) == 0 {
+		if _, err := resolveClient(gf, environ); err != nil {
+			return reportError(err, stdout, stderr, df.jsonMode, "MISSING_SERVER", 0)
+		}
+		return reportError(errors.New("download: job id required"), stdout, stderr, df.jsonMode, "MISSING_ARG", 0)
+	}
+	jobID := positional[0]
+	tail := positional[1:]
+
+	if len(tail) > 0 {
+		if err := fs.Parse(tail); err != nil {
+			return 2
+		}
+	}
+
+	if df.help {
+		printDownloadUsage(stdout)
+		return 0
+	}
+
+	client, err := resolveClient(gf, environ)
+	if err != nil {
+		return reportError(err, stdout, stderr, df.jsonMode, "MISSING_SERVER", 0)
+	}
+
+	body, err := client.Download(context.Background(), jobID)
+	if err != nil {
+		return reportError(err, stdout, stderr, df.jsonMode, "INTERNAL_ERROR", 0)
+	}
+	defer body.Close()
+
+	res, err := archive.DownloadAndExtract(body, df.outputDir, df.keepZip, jobID)
+	if err != nil {
+		switch {
+		case errors.Is(err, archive.ErrUnsafeZipMember):
+			return reportError(err, stdout, stderr, df.jsonMode, "UNSAFE_ZIP_MEMBER", 0)
+		case errors.Is(err, archive.ErrArchiveTooLarge):
+			return reportError(err, stdout, stderr, df.jsonMode, "ARCHIVE_TOO_LARGE", 0)
+		case errors.Is(err, archive.ErrIOError):
+			return reportError(err, stdout, stderr, df.jsonMode, "IO_ERROR", 0)
+		default:
+			return reportError(err, stdout, stderr, df.jsonMode, "INTERNAL_ERROR", 0)
+		}
+	}
+
+	if df.jsonMode {
+		payload := map[string]any{
+			"success":         true,
+			"output_dir":      res.OutputDir,
+			"extracted_files": res.ExtractedFiles,
+		}
+		if res.ZipPath != "" {
+			payload["zip_path"] = res.ZipPath
+		}
+		_ = writeJSON(stdout, payload)
+	} else {
+		fmt.Fprintf(stdout, "extracted %d files into %s\n", len(res.ExtractedFiles), res.OutputDir)
+		if res.ZipPath != "" {
+			fmt.Fprintf(stdout, "zip retained at %s\n", res.ZipPath)
+		}
+	}
+	return 0
 }

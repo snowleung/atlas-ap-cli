@@ -34,3 +34,7 @@ func printStatusUsage(w io.Writer) {
 func printCancelUsage(w io.Writer) {
 	fmt.Fprintln(w, "cancel <job-id> [--json]")
 }
+
+func printDownloadUsage(w io.Writer) {
+	fmt.Fprintln(w, "download <job-id> [--output-dir DIR] [--keep-zip] [--json]")
+}

@@ -22,7 +22,7 @@ type recordedRequest struct {
 	contentType   string
 	authorization string
 	formFields    map[string]string
-	fileContent    []byte
+	fileContent   []byte
 }
 
 func newRecordingServer(handler func(*recordedRequest)) *httptest.Server {
