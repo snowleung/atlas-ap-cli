@@ -12,7 +12,7 @@ errors on stderr.
 ## Features
 
 - **Single binary** — no runtime dependencies, no CGO, no installer.
-- **Single request per command** — submit, status, download, cancel each
+- **Single request per command** — health, submit, status, download, cancel each
   make exactly one HTTP call.
 - **Token safe** — the bearer token is sent only in the Authorization
   header; it is never written to logs, error envelopes, or output files.
@@ -87,6 +87,28 @@ variables. The server URL is normalized by trimming a single trailing
 whitespace is preserved.
 
 ## Commands
+
+### `health`
+
+Check whether the remote service is alive. It performs one `GET /health`
+request and sends the configured bearer token when one is available.
+
+```bash
+atlas-ap-remote --server https://api.example.com health
+atlas-ap-remote --server https://api.example.com --token "$ATLAS_REMOTE_TOKEN" health --json
+```
+
+Human mode:
+
+```text
+status=ok
+```
+
+JSON mode:
+
+```json
+{"status":"ok","success":true}
+```
 
 ### `submit`
 

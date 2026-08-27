@@ -5,7 +5,7 @@ import (
 	"io"
 )
 
-// printUsage writes the top-level help text to w. It describes all four
+// printUsage writes the top-level help text to w. It describes all five
 // commands, the environment-variable fallbacks, the global flags, and
 // the single-request (no polling) contract.
 func printUsage(w io.Writer) {
@@ -31,6 +31,7 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "COMMANDS")
 	fmt.Fprintln(w, "  submit    Upload a file to the remote service (one POST /jobs).")
 	fmt.Fprintln(w, "  status    Read the state of a job (one GET /jobs/{id}).")
+	fmt.Fprintln(w, "  health    Check service liveness (one GET /health).")
 	fmt.Fprintln(w, "  download  Stream results for a completed job (one GET /jobs/{id}/download).")
 	fmt.Fprintln(w, "  cancel    Request cancellation of a running job (one POST /jobs/{id}/cancel).")
 	fmt.Fprintln(w)
@@ -59,6 +60,14 @@ func printStatusUsage(w io.Writer) {
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Usage")
 	fmt.Fprintln(w, "  atlas-ap-remote status <job-id> [--json] [--help]")
+}
+
+func printHealthUsage(w io.Writer) {
+	fmt.Fprintln(w, "health — check service liveness")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "Usage")
+	fmt.Fprintln(w, "  atlas-ap-remote health [--json] [--help]")
+	fmt.Fprintln(w, "  Performs one GET /health request.")
 }
 
 func printCancelUsage(w io.Writer) {

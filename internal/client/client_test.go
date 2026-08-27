@@ -204,6 +204,49 @@ func TestStatus_GETJobByID(t *testing.T) {
 	}
 }
 
+func TestHealth_GETHealthWithBearerToken(t *testing.T) {
+	var gotAuth string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/health" {
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		gotAuth = r.Header.Get("Authorization")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"status":"ok"}`))
+	}))
+	defer srv.Close()
+
+	resp, err := New(srv.URL, "health-token").Health(context.Background())
+	if err != nil {
+		t.Fatalf("health failed: %v", err)
+	}
+	if gotAuth != "Bearer health-token" {
+		t.Errorf("expected bearer token, got %q", gotAuth)
+	}
+	if resp == nil || resp.Status != "ok" {
+		t.Errorf("unexpected response: %+v", resp)
+	}
+}
+
+func TestHealth_GETHealthWithoutToken(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.Header.Get("Authorization"); got != "" {
+			t.Errorf("expected no Authorization header, got %q", got)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"status":"ok"}`))
+	}))
+	defer srv.Close()
+
+	resp, err := New(srv.URL, "").Health(context.Background())
+	if err != nil {
+		t.Fatalf("health failed: %v", err)
+	}
+	if resp.Status != "ok" {
+		t.Errorf("expected status ok, got %q", resp.Status)
+	}
+}
+
 func TestCancel_PostJobCancel(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
