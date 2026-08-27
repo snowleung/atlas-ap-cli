@@ -1,0 +1,352 @@
+package cli
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"flag"
+	"fmt"
+	"io"
+
+	apiclient "github.com/atlas-ap/atlas-ap-remote/internal/client"
+)
+
+// Run parses the CLI arguments, dispatches to the appropriate subcommand,
+// and returns a process exit code. Tests drive this directly without
+// invoking os.Exit.
+func Run(args []string, stdout, stderr io.Writer, environ []string) int {
+	gf, fs, err := parseGlobalFlags(args, stderr)
+	if err != nil {
+		// flag already printed usage to stderr
+		return 2
+	}
+
+	if gf.help {
+		printUsage(stdout)
+		return 0
+	}
+	if gf.version {
+		fmt.Fprintf(stdout, "atlas-ap-remote %s\n", Version)
+		return 0
+	}
+
+	remaining := fs.Args()
+	if len(remaining) == 0 {
+		printUsage(stderr)
+		return 2
+	}
+
+	subcmd := remaining[0]
+	subArgs := remaining[1:]
+
+	switch subcmd {
+	case "submit":
+		return cmdSubmit(gf, environ, subArgs, stdout, stderr)
+	case "status":
+		return cmdStatus(gf, environ, subArgs, stdout, stderr)
+	case "cancel":
+		return cmdCancel(gf, environ, subArgs, stdout, stderr)
+	case "download":
+		return cmdDownload(gf, environ, subArgs, stdout, stderr)
+	default:
+		fmt.Fprintf(stderr, "unknown command: %s\n", subcmd)
+		return 2
+	}
+}
+
+type globalFlags struct {
+	serverFlag string
+	tokenFlag  string
+	help       bool
+	version    bool
+}
+
+// parseGlobalFlags parses --server, --token, --help, and --version from
+// the leading global arguments. Remaining positional arguments (the
+// subcommand and its own arguments) are returned separately.
+func parseGlobalFlags(args []string, stderr io.Writer) (*globalFlags, *flag.FlagSet, error) {
+	fs := flag.NewFlagSet("atlas-ap-remote", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	gf := &globalFlags{}
+	fs.StringVar(&gf.serverFlag, "server", "", "Base URL of the Atlas AP Remote service (default: $ATLAS_REMOTE_URL)")
+	fs.StringVar(&gf.tokenFlag, "token", "", "Bearer token (default: $ATLAS_REMOTE_TOKEN)")
+	fs.BoolVar(&gf.help, "help", false, "Show help and exit")
+	fs.BoolVar(&gf.version, "version", false, "Print version and exit")
+
+	if err := fs.Parse(args); err != nil {
+		return nil, nil, err
+	}
+	return gf, fs, nil
+}
+
+// resolveClient applies the flag/env precedence rules and returns a
+// configured Atlas AP Remote client.
+func resolveClient(gf *globalFlags, environ []string) (*apiclient.Client, error) {
+	cfg, err := ResolveConfig(gf.serverFlag, gf.tokenFlag, environ)
+	if err != nil {
+		return nil, err
+	}
+	return apiclient.New(cfg.Server, cfg.Token), nil
+}
+
+// reportError writes the error envelope to stdout when in JSON mode,
+// otherwise writes a human-readable line to stderr. It always returns 1.
+func reportError(err error, stdout, stderr io.Writer, jsonMode bool, defaultCode string, httpStatus int) int {
+	code := defaultCode
+	message := err.Error()
+	http := httpStatus
+
+	var se *apiclient.ServiceError
+	if errors.As(err, &se) {
+		code = se.Code
+		message = se.Message
+		http = se.HTTPStatus
+	} else if errors.Is(err, apiclient.ErrTimeout) {
+		code = "TIMEOUT"
+	} else if errors.Is(err, apiclient.ErrNetwork) {
+		code = "NETWORK_ERROR"
+	}
+
+	if jsonMode {
+		_ = WriteErrorJSON(stdout, code, message, http)
+	} else {
+		_ = WriteErrorHuman(stderr, code, message)
+	}
+	return 1
+}
+
+// writeJSON writes a single-line JSON envelope followed by a newline.
+func writeJSON(w io.Writer, v any) error {
+	data, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	if _, err := w.Write(data); err != nil {
+		return err
+	}
+	if _, err := w.Write([]byte("\n")); err != nil {
+		return err
+	}
+	return nil
+}
+
+type submitFlags struct {
+	file        string
+	cosType     string
+	bodyParts   string
+	productName string
+	usageMethod string
+	jsonMode    bool
+	help        bool
+}
+
+func parseSubmitFlags(args []string, stderr io.Writer) (*submitFlags, *flag.FlagSet, error) {
+	fs := flag.NewFlagSet("submit", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	sf := &submitFlags{}
+	fs.StringVar(&sf.file, "file", "", "Path to the file to submit")
+	fs.StringVar(&sf.cosType, "cos-type", "驻留", "Cosmetic type")
+	fs.StringVar(&sf.bodyParts, "body-parts", "全身", "Body parts")
+	fs.StringVar(&sf.productName, "product-name", "", "Product name")
+	fs.StringVar(&sf.usageMethod, "usage-method", "", "Usage method")
+	fs.BoolVar(&sf.jsonMode, "json", false, "Emit JSON envelope")
+	fs.BoolVar(&sf.help, "help", false, "Show help for submit")
+
+	if err := fs.Parse(args); err != nil {
+		return nil, fs, err
+	}
+	return sf, fs, nil
+}
+
+func cmdSubmit(gf *globalFlags, environ []string, args []string, stdout, stderr io.Writer) int {
+	sf, _, err := parseSubmitFlags(args, stderr)
+	if err != nil {
+		return 2
+	}
+	if sf.help {
+		printSubmitUsage(stdout)
+		return 0
+	}
+
+	client, err := resolveClient(gf, environ)
+	if err != nil {
+		return reportError(err, stdout, stderr, sf.jsonMode, "MISSING_SERVER", 0)
+	}
+
+	if sf.file == "" {
+		return reportError(errors.New("--file is required"), stdout, stderr, sf.jsonMode, "MISSING_ARG", 0)
+	}
+
+	idemKey, err := apiclient.NewUUIDv4()
+	if err != nil {
+		return reportError(err, stdout, stderr, sf.jsonMode, "INTERNAL_ERROR", 0)
+	}
+
+	resp, err := client.Submit(context.Background(), apiclient.SubmitRequest{
+		FilePath:       sf.file,
+		CosmeticType:   sf.cosType,
+		BodyParts:      sf.bodyParts,
+		ProductName:    sf.productName,
+		UsageMethod:    sf.usageMethod,
+		IdempotencyKey: idemKey,
+	})
+	if err != nil {
+		return reportError(err, stdout, stderr, sf.jsonMode, "INTERNAL_ERROR", 0)
+	}
+
+	if sf.jsonMode {
+		_ = writeJSON(stdout, map[string]any{"success": true, "job_id": resp.JobID})
+	} else {
+		fmt.Fprintf(stdout, "submitted job_id=%s\n", resp.JobID)
+	}
+	return 0
+}
+
+type statusFlags struct {
+	jsonMode bool
+	help     bool
+}
+
+func parseStatusFlags(args []string, stderr io.Writer) (*statusFlags, *flag.FlagSet, error) {
+	fs := flag.NewFlagSet("status", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	sf := &statusFlags{}
+	fs.BoolVar(&sf.jsonMode, "json", false, "Emit JSON envelope")
+	fs.BoolVar(&sf.help, "help", false, "Show help for status")
+
+	if err := fs.Parse(args); err != nil {
+		return nil, fs, err
+	}
+	return sf, fs, nil
+}
+
+func cmdStatus(gf *globalFlags, environ []string, args []string, stdout, stderr io.Writer) int {
+	sf, fs, err := parseStatusFlags(args, stderr)
+	if err != nil {
+		return 2
+	}
+
+	positional := fs.Args()
+	if len(positional) == 0 && !sf.help {
+		if _, err := resolveClient(gf, environ); err != nil {
+			return reportError(err, stdout, stderr, sf.jsonMode, "MISSING_SERVER", 0)
+		}
+		return reportError(errors.New("status: job id required"), stdout, stderr, sf.jsonMode, "MISSING_ARG", 0)
+	}
+	if sf.help && len(positional) == 0 {
+		printStatusUsage(stdout)
+		return 0
+	}
+	jobID := positional[0]
+	tail := positional[1:]
+
+	if len(tail) > 0 {
+		if err := fs.Parse(tail); err != nil {
+			return 2
+		}
+	}
+
+	if sf.help {
+		printStatusUsage(stdout)
+		return 0
+	}
+
+	client, err := resolveClient(gf, environ)
+	if err != nil {
+		return reportError(err, stdout, stderr, sf.jsonMode, "MISSING_SERVER", 0)
+	}
+
+	resp, err := client.Status(context.Background(), jobID)
+	if err != nil {
+		return reportError(err, stdout, stderr, sf.jsonMode, "INTERNAL_ERROR", 0)
+	}
+
+	if sf.jsonMode {
+		_ = writeJSON(stdout, map[string]any{
+			"success": true,
+			"job_id":  resp.JobID,
+			"status":  resp.Status,
+		})
+	} else {
+		fmt.Fprintf(stdout, "job_id=%s status=%s\n", resp.JobID, resp.Status)
+	}
+	return 0
+}
+
+type cancelFlags struct {
+	jsonMode bool
+	help     bool
+}
+
+func parseCancelFlags(args []string, stderr io.Writer) (*cancelFlags, *flag.FlagSet, error) {
+	fs := flag.NewFlagSet("cancel", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	sf := &cancelFlags{}
+	fs.BoolVar(&sf.jsonMode, "json", false, "Emit JSON envelope")
+	fs.BoolVar(&sf.help, "help", false, "Show help for cancel")
+
+	if err := fs.Parse(args); err != nil {
+		return nil, fs, err
+	}
+	return sf, fs, nil
+}
+
+func cmdCancel(gf *globalFlags, environ []string, args []string, stdout, stderr io.Writer) int {
+	sf, fs, err := parseCancelFlags(args, stderr)
+	if err != nil {
+		return 2
+	}
+
+	positional := fs.Args()
+	if sf.help && len(positional) == 0 {
+		printCancelUsage(stdout)
+		return 0
+	}
+	if len(positional) == 0 {
+		if _, err := resolveClient(gf, environ); err != nil {
+			return reportError(err, stdout, stderr, sf.jsonMode, "MISSING_SERVER", 0)
+		}
+		return reportError(errors.New("cancel: job id required"), stdout, stderr, sf.jsonMode, "MISSING_ARG", 0)
+	}
+	jobID := positional[0]
+	tail := positional[1:]
+
+	if len(tail) > 0 {
+		if err := fs.Parse(tail); err != nil {
+			return 2
+		}
+	}
+
+	if sf.help {
+		printCancelUsage(stdout)
+		return 0
+	}
+
+	client, err := resolveClient(gf, environ)
+	if err != nil {
+		return reportError(err, stdout, stderr, sf.jsonMode, "MISSING_SERVER", 0)
+	}
+
+	resp, err := client.Cancel(context.Background(), jobID)
+	if err != nil {
+		return reportError(err, stdout, stderr, sf.jsonMode, "INTERNAL_ERROR", 0)
+	}
+
+	if sf.jsonMode {
+		_ = writeJSON(stdout, map[string]any{
+			"success": true,
+			"job_id":  resp.JobID,
+			"status":  resp.Status,
+		})
+	} else {
+		fmt.Fprintf(stdout, "cancelled job_id=%s\n", resp.JobID)
+	}
+	return 0
+}
+
+// cmdDownload is wired to the archive package in Task 3. This stub keeps
+// the dispatcher complete and the build green.
+func cmdDownload(gf *globalFlags, environ []string, args []string, stdout, stderr io.Writer) int {
+	fmt.Fprintf(stderr, "download: not implemented yet (wired in Task 3)\n")
+	return 2
+}
