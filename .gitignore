@@ -1,0 +1,12 @@
+# Build artifacts
+dist/
+*.exe
+
+# Worktrees
+.worktrees/
+
+# Go build cache (local only)
+/tmp/
+
+# Editor / OS
+.DS_Store
