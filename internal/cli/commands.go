@@ -45,6 +45,8 @@ func Run(args []string, stdout, stderr io.Writer, environ []string) int {
 		return cmdSubmit(gf, environ, subArgs, stdout, stderr)
 	case "status":
 		return cmdStatus(gf, environ, subArgs, stdout, stderr)
+	case "health":
+		return cmdHealth(gf, environ, subArgs, stdout, stderr)
 	case "cancel":
 		return cmdCancel(gf, environ, subArgs, stdout, stderr)
 	case "download":
@@ -199,6 +201,58 @@ func cmdSubmit(gf *globalFlags, environ []string, args []string, stdout, stderr 
 		_ = writeJSON(stdout, map[string]any{"success": true, "job_id": resp.JobID})
 	} else {
 		fmt.Fprintf(stdout, "submitted job_id=%s\n", resp.JobID)
+	}
+	return 0
+}
+
+type healthFlags struct {
+	jsonMode bool
+	help     bool
+}
+
+func parseHealthFlags(args []string, stderr io.Writer) (*healthFlags, *flag.FlagSet, error) {
+	fs := flag.NewFlagSet("health", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	hf := &healthFlags{}
+	fs.BoolVar(&hf.jsonMode, "json", false, "Emit JSON envelope")
+	fs.BoolVar(&hf.help, "help", false, "Show help for health")
+
+	if err := fs.Parse(args); err != nil {
+		return nil, fs, err
+	}
+	return hf, fs, nil
+}
+
+func cmdHealth(gf *globalFlags, environ []string, args []string, stdout, stderr io.Writer) int {
+	hf, fs, err := parseHealthFlags(args, stderr)
+	if err != nil {
+		return 2
+	}
+	if hf.help {
+		printHealthUsage(stdout)
+		return 0
+	}
+	if len(fs.Args()) > 0 {
+		return reportError(errors.New("health: unexpected argument"), stdout, stderr, hf.jsonMode, "MISSING_ARG", 0)
+	}
+
+	client, err := resolveClient(gf, environ)
+	if err != nil {
+		return reportError(err, stdout, stderr, hf.jsonMode, "MISSING_SERVER", 0)
+	}
+
+	resp, err := client.Health(context.Background())
+	if err != nil {
+		return reportError(err, stdout, stderr, hf.jsonMode, "INTERNAL_ERROR", 0)
+	}
+
+	if hf.jsonMode {
+		_ = writeJSON(stdout, map[string]any{
+			"success": true,
+			"status":  resp.Status,
+		})
+	} else {
+		fmt.Fprintf(stdout, "status=%s\n", resp.Status)
 	}
 	return 0
 }

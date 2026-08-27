@@ -81,6 +81,43 @@ func TestRun_VersionFlagExitsZero(t *testing.T) {
 	}
 }
 
+func TestRun_HealthHumanOutput(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/health" {
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		_, _ = w.Write([]byte(`{"status":"ok"}`))
+	}))
+	defer srv.Close()
+
+	stdout, stderr, code := withServer(t, srv, "health")
+	if code != 0 {
+		t.Fatalf("expected 0, got %d (stderr=%s)", code, stderr)
+	}
+	if stdout != "status=ok\n" {
+		t.Errorf("unexpected health output: %q", stdout)
+	}
+}
+
+func TestRun_HealthJSONOutput(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"status":"ok"}`))
+	}))
+	defer srv.Close()
+
+	stdout, stderr, code := withServer(t, srv, "health", "--json")
+	if code != 0 {
+		t.Fatalf("expected 0, got %d (stderr=%s)", code, stderr)
+	}
+	var envelope map[string]any
+	if err := json.Unmarshal([]byte(stdout), &envelope); err != nil {
+		t.Fatalf("invalid JSON output: %v", err)
+	}
+	if envelope["status"] != "ok" || envelope["success"] != true {
+		t.Errorf("unexpected health envelope: %v", envelope)
+	}
+}
+
 func TestRun_NoArgsReturnsTwo(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	code := Run([]string{}, &stdout, &stderr, []string{})

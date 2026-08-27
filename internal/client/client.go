@@ -48,6 +48,11 @@ type StatusResponse struct {
 	ErrorMessage string `json:"error_message,omitempty"`
 }
 
+// HealthResponse is the liveness response returned by GET /health.
+type HealthResponse struct {
+	Status string `json:"status"`
+}
+
 // CancelResponse mirrors the JSON returned by POST /jobs/{id}/cancel.
 type CancelResponse struct {
 	JobID  string `json:"job_id"`
@@ -149,6 +154,25 @@ func (c *Client) Status(ctx context.Context, jobID string) (*StatusResponse, err
 	c.applyAuth(httpReq)
 
 	var resp StatusResponse
+	if err := c.do(httpReq, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// Health performs GET /health.
+func (c *Client) Health(ctx context.Context) (*HealthResponse, error) {
+	u, err := c.buildURL("/health")
+	if err != nil {
+		return nil, err
+	}
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	if err != nil {
+		return nil, fmt.Errorf("health: build request: %w", err)
+	}
+	c.applyAuth(httpReq)
+
+	var resp HealthResponse
 	if err := c.do(httpReq, &resp); err != nil {
 		return nil, err
 	}

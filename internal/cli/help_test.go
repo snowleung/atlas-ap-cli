@@ -22,6 +22,7 @@ func TestHelpText_TopLevel(t *testing.T) {
 		"status",
 		"download",
 		"cancel",
+		"health",
 		"--server",
 		"--token",
 	} {
@@ -35,6 +36,17 @@ func TestHelpText_TopLevel(t *testing.T) {
 		!strings.Contains(strings.ToLower(out), "single request") &&
 		!strings.Contains(strings.ToLower(out), "one request") {
 		t.Errorf("help text should explain no-polling behavior\n---\n%s", out)
+	}
+}
+
+func TestHelpText_Health(t *testing.T) {
+	var buf bytes.Buffer
+	printHealthUsage(&buf)
+	out := buf.String()
+	for _, want := range []string{"health", "GET /health", "--json"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("health help missing %q\n---\n%s", want, out)
+		}
 	}
 }
 

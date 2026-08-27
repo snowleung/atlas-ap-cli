@@ -12,7 +12,7 @@ errors on stderr.
 ## Features
 
 - **Single binary** — no runtime dependencies, no CGO, no installer.
-- **Single request per command** — submit, status, download, cancel each
+- **Single request per command** — health, submit, status, download, cancel each
   make exactly one HTTP call.
 - **Token safe** — the bearer token is sent only in the Authorization
   header; it is never written to logs, error envelopes, or output files.
@@ -33,6 +33,9 @@ Use PowerShell 5+ on Windows 10/11 or Windows Server 2019+.
 # from the repository root
 .\build.ps1
 # -> dist\atlas-ap-remote.exe
+
+# Formal release build with an explicit version
+.\build.ps1 -Version 0.2.0
 ```
 
 To target a different architecture:
@@ -50,7 +53,7 @@ additional runtime files.
 
 ```bash
 GOOS=windows GOARCH=amd64 CGO_ENABLED=0 \
-  go build -trimpath -ldflags "-s -w -X github.com/atlas-ap/atlas-ap-remote/internal/cli.Version=0.1.0" \
+  go build -trimpath -ldflags "-s -w -X github.com/atlas-ap/atlas-ap-remote/internal/cli.Version=0.2.0" \
   -o dist/atlas-ap-remote.exe ./cmd/atlas-ap-remote
 ```
 
@@ -84,6 +87,28 @@ variables. The server URL is normalized by trimming a single trailing
 whitespace is preserved.
 
 ## Commands
+
+### `health`
+
+Check whether the remote service is alive. It performs one `GET /health`
+request and sends the configured bearer token when one is available.
+
+```bash
+atlas-ap-remote --server https://api.example.com health
+atlas-ap-remote --server https://api.example.com --token "$ATLAS_REMOTE_TOKEN" health --json
+```
+
+Human mode:
+
+```text
+status=ok
+```
+
+JSON mode:
+
+```json
+{"status":"ok","success":true}
+```
 
 ### `submit`
 
