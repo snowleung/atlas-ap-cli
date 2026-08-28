@@ -31,8 +31,11 @@ Use PowerShell 5+ on Windows 10/11 or Windows Server 2019+.
 
 #### Precompiled binaries
 
-Download the latest `atlas-ap-remote-windows-amd64.exe` and its optional
-SHA256 checksum from the [GitHub Releases page](https://github.com/snowleung/atlas-ap-cli/releases/latest).
+Download the latest platform binary and its SHA256 checksum from the
+[GitHub Releases page](https://github.com/snowleung/atlas-ap-cli/releases/latest):
+
+- `atlas-ap-remote-windows-amd64.exe` for Windows
+- `atlas-ap-remote-darwin-arm64` for Apple Silicon Mac
 
 Rename the executable if desired, then run it directly or place it on your
 `PATH`:
@@ -71,6 +74,31 @@ GOOS=windows GOARCH=amd64 CGO_ENABLED=0 \
   go build -trimpath -ldflags "-s -w -X github.com/atlas-ap/atlas-ap-remote/internal/cli.Version=0.2.0" \
   -o dist/atlas-ap-remote.exe ./cmd/atlas-ap-remote
 ```
+
+### macOS (Apple Silicon)
+
+On an Apple Silicon Mac (M1/M2/M3/M4), run:
+
+```bash
+chmod +x build.sh
+./build.sh
+```
+
+This produces `dist/atlas-ap-remote` for `darwin/arm64`. It can be run
+directly from bash or zsh:
+
+```bash
+./dist/atlas-ap-remote --help
+```
+
+To build for an Intel Mac instead:
+
+```bash
+./build.sh -arch amd64
+```
+
+The output directory and version can also be changed with `-out` and
+`-version`.
 
 ### Run from source
 

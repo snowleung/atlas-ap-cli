@@ -1,4 +1,4 @@
-name: Release Windows executable
+name: Release binaries
 
 on:
   push:
@@ -13,62 +13,98 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  release:
+  build-windows:
+    name: Build Windows amd64
     runs-on: windows-latest
 
     steps:
       - name: Check out tagged commit
         uses: actions/checkout@v4
-
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.27.x'
           cache: false
-
       - name: Derive release version
         shell: pwsh
         env:
           TAG_NAME: ${{ github.ref_name }}
         run: |
           $version = $env:TAG_NAME -replace '^v', ''
-          if ([string]::IsNullOrWhiteSpace($version)) {
-            throw "Release tag must contain a version after the leading v."
-          }
+          if ([string]::IsNullOrWhiteSpace($version)) { throw "Release tag must contain a version after the leading v." }
           "RELEASE_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-
       - name: Build Windows executable
         shell: pwsh
         run: .\build.ps1 -Version $env:RELEASE_VERSION -Out dist
-
-      - name: Prepare release asset
+      - name: Prepare Windows release assets
         shell: pwsh
         run: |
           $source = "dist\atlas-ap-remote.exe"
           $asset = "dist\atlas-ap-remote-windows-amd64.exe"
-          if (-not (Test-Path -LiteralPath $source)) {
-            throw "Build output was not found: $source"
-          }
-          if ((Get-Item -LiteralPath $source).Length -le 0) {
-            throw "Build output is empty: $source"
-          }
+          if (-not (Test-Path -LiteralPath $source)) { throw "Build output was not found: $source" }
+          if ((Get-Item -LiteralPath $source).Length -le 0) { throw "Build output is empty: $source" }
           Move-Item -LiteralPath $source -Destination $asset
+          $hash = (Get-FileHash -LiteralPath $asset -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  atlas-ap-remote-windows-amd64.exe" | Set-Content -LiteralPath "dist\atlas-ap-remote-windows-amd64.exe.sha256" -Encoding ascii
+      - name: Upload Windows release assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-assets
+          path: dist/
+          if-no-files-found: error
 
-      - name: Generate SHA256 checksum
-        shell: pwsh
+  build-macos-arm64:
+    name: Build macOS arm64
+    runs-on: macos-14
+
+    steps:
+      - name: Check out tagged commit
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.x'
+          cache: false
+      - name: Derive release version
+        env:
+          TAG_NAME: ${{ github.ref_name }}
         run: |
-          $assetName = "atlas-ap-remote-windows-amd64.exe"
-          $assetPath = "dist\$assetName"
-          $hash = (Get-FileHash -LiteralPath $assetPath -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$hash  $assetName" | Set-Content -LiteralPath "dist\$assetName.sha256" -Encoding ascii
+          version="${TAG_NAME#v}"
+          test -n "$version"
+          echo "RELEASE_VERSION=$version" >> "$GITHUB_ENV"
+      - name: Build macOS Apple Silicon binary
+        run: ./build.sh -arch arm64 -version "$RELEASE_VERSION" -out dist
+      - name: Prepare macOS release assets
+        run: |
+          asset="dist/atlas-ap-remote-darwin-arm64"
+          mv dist/atlas-ap-remote "$asset"
+          test -s "$asset"
+          shasum -a 256 "$asset" | sed 's#dist/##' > "${asset}.sha256"
+      - name: Upload macOS release assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-arm64-assets
+          path: dist/
+          if-no-files-found: error
 
+  release:
+    name: Create GitHub Release
+    needs:
+      - build-windows
+      - build-macos-arm64
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download release assets
+        uses: actions/download-artifact@v4
+        with:
+          pattern: '*-assets'
+          path: dist
+          merge-multiple: true
       - name: Create GitHub Release
-        shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-        run: >-
-          gh release create $env:GITHUB_REF_NAME
-          dist/atlas-ap-remote-windows-amd64.exe
-          dist/atlas-ap-remote-windows-amd64.exe.sha256
-          --title $env:GITHUB_REF_NAME
-          --generate-notes
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          test -s dist/atlas-ap-remote-windows-amd64.exe
+          test -s dist/atlas-ap-remote-darwin-arm64
+          gh release create "$TAG_NAME" dist/* --title "$TAG_NAME" --generate-notes
