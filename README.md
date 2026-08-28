@@ -29,6 +29,21 @@ errors on stderr.
 
 Use PowerShell 5+ on Windows 10/11 or Windows Server 2019+.
 
+#### Precompiled binaries
+
+Download the latest `atlas-ap-remote-windows-amd64.exe` and its optional
+SHA256 checksum from the [GitHub Releases page](https://github.com/snowleung/atlas-ap-cli/releases/latest).
+
+Rename the executable if desired, then run it directly or place it on your
+`PATH`:
+
+```powershell
+Rename-Item .\atlas-ap-remote-windows-amd64.exe atlas-ap-remote.exe
+.\atlas-ap-remote.exe --help
+```
+
+#### Build from source
+
 ```powershell
 # from the repository root
 .\build.ps1
@@ -65,6 +80,19 @@ go run ./cmd/atlas-ap-remote --help
 
 `go run` does not require an installed Go runtime — it shells out to the
 `go` binary — but it is intended for development only.
+
+## Agent skills
+
+The repository includes an [Atlas AP Remote Agent skill](skill/atlas-ap-remote/SKILL.md)
+that teaches Codex and compatible agents how to submit files, check or cancel
+jobs, and download results safely.
+
+From the repository root, install it for Codex with:
+
+```bash
+mkdir -p ~/.codex/skills/atlas-ap-remote
+cp skill/atlas-ap-remote/SKILL.md ~/.codex/skills/atlas-ap-remote/SKILL.md
+```
 
 ## Configuration
 
