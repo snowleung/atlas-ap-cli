@@ -51,6 +51,14 @@ func Run(args []string, stdout, stderr io.Writer, environ []string) int {
 		return cmdCancel(gf, environ, subArgs, stdout, stderr)
 	case "download":
 		return cmdDownload(gf, environ, subArgs, stdout, stderr)
+	case "material-db":
+		return cmdDataFile(gf, environ, "material-db", "/data-files/material-db", subArgs, stdout, stderr)
+	case "reference-db":
+		return cmdDataFile(gf, environ, "reference-db", "/data-files/reference-db", subArgs, stdout, stderr)
+	case "risk-db":
+		return cmdDataFile(gf, environ, "risk-db", "/data-files/risk-db", subArgs, stdout, stderr)
+	case "special-materials-config":
+		return cmdDataFile(gf, environ, "special-materials-config", "/data-files/special-materials-config", subArgs, stdout, stderr)
 	default:
 		fmt.Fprintf(stderr, "unknown command: %s\n", subcmd)
 		return 2
@@ -492,6 +500,62 @@ func cmdDownload(gf *globalFlags, environ []string, args []string, stdout, stder
 		if res.ZipPath != "" {
 			fmt.Fprintf(stdout, "zip retained at %s\n", res.ZipPath)
 		}
+	}
+	return 0
+}
+
+type dataFileFlags struct {
+	file     string
+	jsonMode bool
+	help     bool
+}
+
+func parseDataFileFlags(args []string, stderr io.Writer) (*dataFileFlags, *flag.FlagSet, error) {
+	fs := flag.NewFlagSet("data-file", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	df := &dataFileFlags{}
+	fs.StringVar(&df.file, "file", "", "Path to the file to upload")
+	fs.BoolVar(&df.jsonMode, "json", false, "Emit JSON envelope")
+	fs.BoolVar(&df.help, "help", false, "Show help for this command")
+
+	if err := fs.Parse(args); err != nil {
+		return nil, fs, err
+	}
+	return df, fs, nil
+}
+
+func cmdDataFile(gf *globalFlags, environ []string, command, endpoint string, args []string, stdout, stderr io.Writer) int {
+	df, _, err := parseDataFileFlags(args, stderr)
+	if err != nil {
+		return 2
+	}
+	if df.help {
+		printDataFileUsage(stdout, command)
+		return 0
+	}
+
+	client, err := resolveClient(gf, environ)
+	if err != nil {
+		return reportError(err, stdout, stderr, df.jsonMode, "MISSING_SERVER", 0)
+	}
+
+	if df.file == "" {
+		return reportError(errors.New("--file is required"), stdout, stderr, df.jsonMode, "MISSING_ARG", 0)
+	}
+
+	resp, err := client.UploadDataFile(context.Background(), endpoint, df.file)
+	if err != nil {
+		return reportError(err, stdout, stderr, df.jsonMode, "INTERNAL_ERROR", 0)
+	}
+
+	if df.jsonMode {
+		_ = writeJSON(stdout, map[string]any{"success": true, "response": resp})
+	} else {
+		data, err := json.MarshalIndent(resp, "", "  ")
+		if err != nil {
+			return reportError(err, stdout, stderr, false, "INTERNAL_ERROR", 0)
+		}
+		fmt.Fprintf(stdout, "%s\n", data)
 	}
 	return 0
 }

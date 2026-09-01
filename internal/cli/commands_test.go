@@ -401,6 +401,142 @@ func TestRun_HelpFlagForSubcommand(t *testing.T) {
 	}
 }
 
+func TestRun_DataFileCommands(t *testing.T) {
+	commands := []struct {
+		name string
+		path string
+	}{
+		{"material-db", "/data-files/material-db"},
+		{"reference-db", "/data-files/reference-db"},
+		{"risk-db", "/data-files/risk-db"},
+		{"special-materials-config", "/data-files/special-materials-config"},
+	}
+
+	for _, tc := range commands {
+		t.Run(tc.name+"-json", func(t *testing.T) {
+			var gotMethod, gotPath, gotContentType, gotFile string
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				gotMethod = r.Method
+				gotPath = r.URL.Path
+				gotContentType = r.Header.Get("Content-Type")
+				if err := r.ParseMultipartForm(1 << 20); err == nil {
+					for _, files := range r.MultipartForm.File {
+						for _, fh := range files {
+							f, _ := fh.Open()
+							data, _ := io.ReadAll(f)
+							gotFile = string(data)
+							f.Close()
+						}
+					}
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(map[string]any{"accepted": true, "kind": tc.name})
+			}))
+			defer srv.Close()
+
+			tmp := writeTempFile(t, "datafile-"+tc.name)
+			stdout, stderr, code := withServer(t, srv, tc.name, "--file", tmp, "--json")
+			if code != 0 {
+				t.Fatalf("expected 0, got %d (stderr=%s)", code, stderr)
+			}
+			if gotMethod != http.MethodPost || gotPath != tc.path {
+				t.Errorf("unexpected request: %s %s", gotMethod, gotPath)
+			}
+			if !strings.HasPrefix(gotContentType, "multipart/form-data") {
+				t.Errorf("expected multipart, got %q", gotContentType)
+			}
+			if gotFile != "datafile-"+tc.name {
+				t.Errorf("file content mismatch: %q", gotFile)
+			}
+
+			var env map[string]any
+			if err := json.Unmarshal([]byte(strings.TrimSpace(stdout)), &env); err != nil {
+				t.Fatalf("stdout is not JSON: %v (%q)", err, stdout)
+			}
+			if env["success"] != true {
+				t.Errorf("expected success=true, got %v", env["success"])
+			}
+			resp, ok := env["response"].(map[string]any)
+			if !ok {
+				t.Fatalf("expected response object, got %T", env["response"])
+			}
+			if resp["accepted"] != true || resp["kind"] != tc.name {
+				t.Errorf("unexpected response: %v", resp)
+			}
+		})
+
+		t.Run(tc.name+"-human", func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(map[string]any{"accepted": true, "kind": tc.name})
+			}))
+			defer srv.Close()
+
+			tmp := writeTempFile(t, "x")
+			stdout, stderr, code := withServer(t, srv, tc.name, "--file", tmp)
+			if code != 0 {
+				t.Fatalf("expected 0, got %d (stderr=%s)", code, stderr)
+			}
+			if !strings.Contains(stdout, `"kind": "`+tc.name+`"`) {
+				t.Errorf("expected indented JSON with kind, got %q", stdout)
+			}
+			if !strings.Contains(stdout, "\n") {
+				t.Errorf("expected multi-line indented JSON, got %q", stdout)
+			}
+		})
+	}
+}
+
+func TestRun_DataFileMissingFile(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	defer srv.Close()
+
+	stdout, stderr, code := withServer(t, srv, "material-db", "--json")
+	if code != 1 {
+		t.Errorf("expected 1, got %d", code)
+	}
+	combined := stdout + stderr
+	if !strings.Contains(combined, "MISSING_ARG") {
+		t.Errorf("expected MISSING_ARG, got stdout=%q stderr=%q", stdout, stderr)
+	}
+}
+
+func TestRun_DataFileHelp(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{"material-db", "--help"}, &stdout, &stderr, []string{})
+	if code != 0 {
+		t.Errorf("expected 0, got %d", code)
+	}
+	if !strings.Contains(stdout.String(), "--file") {
+		t.Errorf("expected --file in help, got %q", stdout.String())
+	}
+}
+
+func TestRun_DataFileServiceError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`{"code":"BAD_FILE","message":"bad file"}`))
+	}))
+	defer srv.Close()
+
+	tmp := writeTempFile(t, "x")
+	stdout, stderr, code := withServer(t, srv, "risk-db", "--file", tmp, "--json")
+	if code != 1 {
+		t.Errorf("expected 1, got %d (stderr=%s)", code, stderr)
+	}
+	var env map[string]any
+	if err := json.Unmarshal([]byte(strings.TrimSpace(stdout)), &env); err != nil {
+		t.Fatalf("stdout is not JSON: %v (%q)", err, stdout)
+	}
+	if env["code"] != "BAD_FILE" {
+		t.Errorf("expected code=BAD_FILE, got %v", env["code"])
+	}
+	if env["http_status"] != float64(400) {
+		t.Errorf("expected http_status=400, got %v", env["http_status"])
+	}
+}
+
 // looksLikeUUIDv4 mirrors the helper in internal/client/client_test.go;
 // duplicated here to keep this test package self-contained.
 func looksLikeUUIDv4(s string) bool {

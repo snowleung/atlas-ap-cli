@@ -87,3 +87,11 @@ func printDownloadUsage(w io.Writer) {
 	fmt.Fprintln(w, "         [--json]")
 	fmt.Fprintln(w, "         [--help]")
 }
+
+func printDataFileUsage(w io.Writer, command string) {
+	fmt.Fprintf(w, "%s — upload one data file\n", command)
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "Usage")
+	fmt.Fprintf(w, "  atlas-ap-remote %s --file <path> [--json] [--help]\n", command)
+	fmt.Fprintln(w, "  Uploads a single data file in one POST request.")
+}
