@@ -39,6 +39,40 @@ func TestHelpText_TopLevel(t *testing.T) {
 	}
 }
 
+// TestHelpText_TopLevelDataFiles requires the top-level help to list all
+// four data-file commands alongside their endpoints.
+func TestHelpText_TopLevelDataFiles(t *testing.T) {
+	var buf bytes.Buffer
+	printUsage(&buf)
+	out := buf.String()
+
+	for _, want := range []string{
+		"material-db", "/data-files/material-db",
+		"reference-db", "/data-files/reference-db",
+		"risk-db", "/data-files/risk-db",
+		"special-materials-config", "/data-files/special-materials-config",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("top-level help missing %q\n---\n%s", want, out)
+		}
+	}
+}
+
+// TestHelpText_DataFile requires the command-specific usage to mention the
+// command name, --file, --json, --help, and the single-POST contract.
+func TestHelpText_DataFile(t *testing.T) {
+	for _, command := range []string{"material-db", "reference-db", "risk-db", "special-materials-config"} {
+		var buf bytes.Buffer
+		printDataFileUsage(&buf, command)
+		out := buf.String()
+		for _, want := range []string{command, "--file", "--json", "--help", "POST"} {
+			if !strings.Contains(out, want) {
+				t.Errorf("%s help missing %q\n---\n%s", command, want, out)
+			}
+		}
+	}
+}
+
 func TestHelpText_Health(t *testing.T) {
 	var buf bytes.Buffer
 	printHealthUsage(&buf)

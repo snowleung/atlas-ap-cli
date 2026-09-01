@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -399,6 +400,124 @@ func TestDownload_ServiceError(t *testing.T) {
 	}
 	if se.Code != "NOT_FOUND" {
 		t.Errorf("code mismatch: %q", se.Code)
+	}
+}
+
+func TestUploadDataFile_SendsMultipartToAllEndpoints(t *testing.T) {
+	content := "upload-payload"
+	endpoints := []string{
+		"/data-files/material-db",
+		"/data-files/reference-db",
+		"/data-files/risk-db",
+		"/data-files/special-materials-config",
+	}
+
+	var (
+		gotMethod   string
+		gotPath     string
+		gotAuth     string
+		gotFilename string
+		gotContent  string
+	)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotMethod = r.Method
+		gotPath = r.URL.Path
+		gotAuth = r.Header.Get("Authorization")
+		if err := r.ParseMultipartForm(1 << 20); err != nil {
+			t.Errorf("parse multipart: %v", err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		files := r.MultipartForm.File["file"]
+		if len(files) != 1 {
+			t.Errorf("expected exactly one 'file' part, got %d", len(files))
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		gotFilename = files[0].Filename
+		f, err := files[0].Open()
+		if err != nil {
+			t.Errorf("open part: %v", err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		data, _ := io.ReadAll(f)
+		f.Close()
+		gotContent = string(data)
+
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{"accepted": true, "count": 3})
+	}))
+	defer srv.Close()
+
+	for _, ep := range endpoints {
+		filePath := writeTempFile(t, content)
+		resp, err := New(srv.URL, "test-token").UploadDataFile(context.Background(), ep, filePath)
+		if err != nil {
+			t.Fatalf("UploadDataFile(%q) failed: %v", ep, err)
+		}
+		if gotMethod != http.MethodPost {
+			t.Errorf("UploadDataFile(%q): expected POST, got %s", ep, gotMethod)
+		}
+		if gotPath != ep {
+			t.Errorf("UploadDataFile(%q): expected path %q, got %q", ep, ep, gotPath)
+		}
+		if gotAuth != "Bearer test-token" {
+			t.Errorf("UploadDataFile(%q): expected Bearer test-token, got %q", ep, gotAuth)
+		}
+		if gotContent != content {
+			t.Errorf("UploadDataFile(%q): content mismatch: %q", ep, gotContent)
+		}
+		if gotFilename != filepath.Base(filePath) {
+			t.Errorf("UploadDataFile(%q): filename mismatch: got %q want %q", ep, gotFilename, filepath.Base(filePath))
+		}
+		if resp == nil {
+			t.Fatal("response is nil")
+		}
+		if resp["accepted"] != true {
+			t.Errorf("UploadDataFile(%q): expected accepted=true, got %v", ep, resp["accepted"])
+		}
+		if resp["count"] != float64(3) {
+			t.Errorf("UploadDataFile(%q): expected count=3, got %v", ep, resp["count"])
+		}
+	}
+}
+
+func TestUploadDataFile_EmptyFilePath(t *testing.T) {
+	c := New("http://127.0.0.1:1", "")
+	if _, err := c.UploadDataFile(context.Background(), "/data-files/material-db", ""); err == nil {
+		t.Fatal("expected error for empty file path, got nil")
+	}
+}
+
+func TestUploadDataFile_EmptyEndpoint(t *testing.T) {
+	c := New("http://127.0.0.1:1", "")
+	if _, err := c.UploadDataFile(context.Background(), "", writeTempFile(t, "x")); err == nil {
+		t.Fatal("expected error for empty endpoint, got nil")
+	}
+}
+
+func TestUploadDataFile_ServiceError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		_, _ = w.Write([]byte(`{"code":"BAD_FILE","message":"unsupported format"}`))
+	}))
+	defer srv.Close()
+
+	_, err := New(srv.URL, "").UploadDataFile(context.Background(), "/data-files/risk-db", writeTempFile(t, "x"))
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	var se *ServiceError
+	if !errors.As(err, &se) {
+		t.Fatalf("expected *ServiceError, got %T", err)
+	}
+	if se.Code != "BAD_FILE" {
+		t.Errorf("code mismatch: %q", se.Code)
+	}
+	if se.HTTPStatus != http.StatusUnprocessableEntity {
+		t.Errorf("http status mismatch: %d", se.HTTPStatus)
 	}
 }
 

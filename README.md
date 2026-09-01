@@ -22,6 +22,9 @@ errors on stderr.
   and rejects ZIP entries that attempt to escape the output directory
   (`../escape.txt`, absolute paths, Windows-style `..\escape.txt`).
 - **JSON mode** — every command supports `--json` for scriptable use.
+- **Data-file uploads** — `material-db`, `reference-db`, `risk-db`, and
+  `special-materials-config` each upload one local file to their dedicated
+  `/data-files/...` endpoint with a single multipart POST.
 
 ## Installation
 
@@ -248,6 +251,40 @@ Success envelope:
 
 ```json
 {"job_id":"abcd-1234","status":"cancelled","success":true}
+```
+
+### Data-file uploads
+
+`material-db`, `reference-db`, `risk-db`, and
+`special-materials-config` each upload one local file to the matching
+Atlas Core data-file endpoint. The `--file` flag is required; the file is
+sent as a `multipart/form-data` part named `file` in a single POST
+request. The CLI does not poll or retry.
+
+```bash
+atlas-ap-remote --server https://api.example.com material-db --file ./material.db --json
+atlas-ap-remote --server https://api.example.com reference-db --file ./reference.db --json
+atlas-ap-remote --server https://api.example.com risk-db --file ./risk.db --json
+atlas-ap-remote --server https://api.example.com special-materials-config --file ./special-materials.json --json
+```
+
+The service responds with an arbitrary JSON object. In JSON mode the
+object is wrapped in the standard envelope; in human mode it is printed
+as indented JSON.
+
+JSON mode:
+
+```json
+{"success":true,"response":{"accepted":true,"count":3}}
+```
+
+Human mode:
+
+```json
+{
+  "accepted": true,
+  "count": 3
+}
 ```
 
 ## Output and errors

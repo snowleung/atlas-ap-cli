@@ -34,6 +34,11 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  health    Check service liveness (one GET /health).")
 	fmt.Fprintln(w, "  download  Stream results for a completed job (one GET /jobs/{id}/download).")
 	fmt.Fprintln(w, "  cancel    Request cancellation of a running job (one POST /jobs/{id}/cancel).")
+	fmt.Fprintln(w, "  material-db    Upload a data file (one POST /data-files/material-db).")
+	fmt.Fprintln(w, "  reference-db   Upload a data file (one POST /data-files/reference-db).")
+	fmt.Fprintln(w, "  risk-db        Upload a data file (one POST /data-files/risk-db).")
+	fmt.Fprintln(w, "  special-materials-config")
+	fmt.Fprintln(w, "                 Upload a data file (one POST /data-files/special-materials-config).")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "OUTPUT")
 	fmt.Fprintln(w, "  Each command performs exactly one HTTP request. The CLI does not poll")
@@ -86,4 +91,12 @@ func printDownloadUsage(w io.Writer) {
 	fmt.Fprintln(w, "         [--keep-zip]")
 	fmt.Fprintln(w, "         [--json]")
 	fmt.Fprintln(w, "         [--help]")
+}
+
+func printDataFileUsage(w io.Writer, command string) {
+	fmt.Fprintf(w, "%s — upload one data file\n", command)
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "Usage")
+	fmt.Fprintf(w, "  atlas-ap-remote %s --file <path> [--json] [--help]\n", command)
+	fmt.Fprintln(w, "  Uploads a single data file in one POST request.")
 }
