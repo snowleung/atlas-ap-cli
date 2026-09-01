@@ -125,6 +125,20 @@ mkdir -p ~/.codex/skills/atlas-ap-remote
 cp skill/atlas-ap-remote/SKILL.md ~/.codex/skills/atlas-ap-remote/SKILL.md
 ```
 
+Or paste this prompt into your agent to install both the CLI and the skill
+automatically:
+
+```text
+Install the atlas-ap-remote CLI and its agent skill: download the latest
+release binary for this machine from the GitHub Releases page
+(`atlas-ap-remote-windows-amd64.exe` for Windows,
+`atlas-ap-remote-darwin-arm64` for Apple Silicon Mac), verify its SHA256
+checksum, install it on PATH as `atlas-ap-remote`, and copy
+`skill/atlas-ap-remote/SKILL.md` into your skills directory
+(`~/.codex/skills/atlas-ap-remote/SKILL.md` for Codex,
+`~/.claude/skills/atlas-ap-remote/SKILL.md` for Claude Code).
+```
+
 ## Configuration
 
 Two environment variables configure the client when the flags are not
