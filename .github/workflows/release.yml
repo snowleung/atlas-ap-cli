@@ -94,6 +94,8 @@ jobs:
       - build-macos-arm64
     runs-on: ubuntu-latest
     steps:
+      - name: Check out tagged commit
+        uses: actions/checkout@v4
       - name: Download release assets
         uses: actions/download-artifact@v4
         with:
