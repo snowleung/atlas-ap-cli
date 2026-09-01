@@ -138,6 +138,57 @@ func (c *Client) Submit(ctx context.Context, req SubmitRequest) (*SubmitResponse
 	return &resp, nil
 }
 
+// UploadDataFile performs a multipart POST to one of the /data-files
+// endpoints. It opens filePath, streams its contents as the "file" part
+// using the file's basename, applies bearer auth, and decodes the
+// successful JSON response into an arbitrary object. The caller owns the
+// command-to-endpoint mapping; this method owns the HTTP protocol details.
+func (c *Client) UploadDataFile(ctx context.Context, endpoint, filePath string) (map[string]any, error) {
+	if endpoint == "" {
+		return nil, fmt.Errorf("data-file: endpoint required")
+	}
+	if filePath == "" {
+		return nil, fmt.Errorf("data-file: file path required")
+	}
+
+	f, err := os.Open(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("data-file: open %s: %w", filePath, err)
+	}
+	defer f.Close()
+
+	body := &bytes.Buffer{}
+	mw := multipart.NewWriter(body)
+
+	fw, err := mw.CreateFormFile("file", filepath.Base(filePath))
+	if err != nil {
+		return nil, fmt.Errorf("data-file: create file field: %w", err)
+	}
+	if _, err := io.Copy(fw, f); err != nil {
+		return nil, fmt.Errorf("data-file: copy file: %w", err)
+	}
+	if err := mw.Close(); err != nil {
+		return nil, fmt.Errorf("data-file: close multipart: %w", err)
+	}
+
+	u, err := c.buildURL(endpoint)
+	if err != nil {
+		return nil, err
+	}
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, u, body)
+	if err != nil {
+		return nil, fmt.Errorf("data-file: build request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", mw.FormDataContentType())
+	c.applyAuth(httpReq)
+
+	var resp map[string]any
+	if err := c.do(httpReq, &resp); err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
 // Status performs GET /jobs/{id}.
 func (c *Client) Status(ctx context.Context, jobID string) (*StatusResponse, error) {
 	if jobID == "" {
