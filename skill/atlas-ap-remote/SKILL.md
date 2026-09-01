@@ -86,6 +86,25 @@ atlas-ap-remote --server <url> download <job-id> \
 
 Tell the user where files were extracted. Mention the ZIP path only when `--keep-zip` was used.
 
+### Upload a data file
+
+Four commands upload a single local data file to its dedicated Atlas Core
+endpoint: `material-db`, `reference-db`, `risk-db`, and
+`special-materials-config`. Each sends one multipart POST with a required
+`file` part; the user must provide the file path.
+
+```bash
+atlas-ap-remote --server "$ATLAS_REMOTE_URL" material-db --file <path> --json
+atlas-ap-remote --server "$ATLAS_REMOTE_URL" reference-db --file <path> --json
+atlas-ap-remote --server "$ATLAS_REMOTE_URL" risk-db --file <path> --json
+atlas-ap-remote --server "$ATLAS_REMOTE_URL" special-materials-config --file <path> --json
+```
+
+The command does not poll or retry; it performs exactly one POST request.
+The response is an arbitrary JSON object, reported verbatim (in `--json`
+mode as `{"success":true,"response":{...}}`). Do not assume particular
+response keys or invent upload results beyond what the server returned.
+
 ### Cancel a job
 
 Use one request when the user asks to cancel a job:
