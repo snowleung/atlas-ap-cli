@@ -58,6 +58,18 @@ func printSubmitUsage(w io.Writer) {
 	fmt.Fprintln(w, "         [--usage-method METHOD]")
 	fmt.Fprintln(w, "         [--json]")
 	fmt.Fprintln(w, "         [--help]")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "Body parts")
+	fmt.Fprintln(w, "  --body-parts accepts Chinese text (default: 全身). Reference values:")
+	fmt.Fprintln(w, "    全身")
+	fmt.Fprintln(w, "    躯干部位")
+	fmt.Fprintln(w, "    面部（含颈部）")
+	fmt.Fprintln(w, "    手足")
+	fmt.Fprintln(w, "    头部")
+	fmt.Fprintln(w, "    头发")
+	fmt.Fprintln(w, "    口唇")
+	fmt.Fprintln(w, "    眼部")
+	fmt.Fprintln(w, "    指（趾）甲")
 }
 
 func printStatusUsage(w io.Writer) {
