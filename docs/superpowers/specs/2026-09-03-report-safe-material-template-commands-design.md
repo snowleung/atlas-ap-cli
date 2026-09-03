@@ -91,15 +91,26 @@ In the skill's data-file routing section:
 - Change the supported-command count from four to six.
 - Add `report-template` and `safe-material-template` to the supported command
   list, using the same names exposed by the CLI.
-- Add copyable invocations for both commands with the required
-  `--file <path>` and the existing default `--json` guidance.
+- Add this deterministic filename-to-command routing table:
+
+  | Source filename | CLI command | Endpoint |
+  | --- | --- | --- |
+  | `模板文件_勿删.docx` | `report-template` | `/data-files/report-template` |
+  | `配方的成分安全评估模板_勿删.docx` | `safe-material-template` | `/data-files/safe-material-template` |
+
+- Add copyable invocations for both commands using those filenames, the
+  required `--file <path>`, and the existing default `--json` guidance.
 - Require a user-provided local file path before invoking either command.
+- Select the command from the source file's basename according to the table,
+  pass the path through unchanged, and report a mismatch instead of guessing
+  when neither basename matches.
 - Preserve the instruction to make exactly one POST, avoid polling and
   automatic retries, and report only response fields returned by the server.
 
 The skill remains a concise routing and safety guide. It does not duplicate
-the OpenAPI schema or add template-specific file-extension rules that the
-service does not declare.
+the OpenAPI schema. The exact basenames above guide agent routing only; the CLI
+does not reject other names, infer a template type from file contents, or
+rename the uploaded file.
 
 ## Other documentation
 
