@@ -79,9 +79,30 @@ Run the focused tests first during each red-green cycle, then run formatting,
 `git diff --check`, `go vet ./...`, and `go test ./... -count=1` before declaring
 the work complete.
 
-## Documentation
+## Agent skill integration
 
-Update the README and bundled `atlas-ap-remote` agent skill so their data-file
-upload lists and examples include both commands. Documentation must state that
-the user provides the file path and that each command performs one request
-without polling or retrying.
+Treat `skill/atlas-ap-remote/SKILL.md` as a first-class deliverable of this
+change. Update its frontmatter description so requests to upload Atlas data
+files or templates reliably activate the skill, while retaining the existing
+job and safety-assessment triggers.
+
+In the skill's data-file routing section:
+
+- Change the supported-command count from four to six.
+- Add `report-template` and `safe-material-template` to the supported command
+  list, using the same names exposed by the CLI.
+- Add copyable invocations for both commands with the required
+  `--file <path>` and the existing default `--json` guidance.
+- Require a user-provided local file path before invoking either command.
+- Preserve the instruction to make exactly one POST, avoid polling and
+  automatic retries, and report only response fields returned by the server.
+
+The skill remains a concise routing and safety guide. It does not duplicate
+the OpenAPI schema or add template-specific file-extension rules that the
+service does not declare.
+
+## Other documentation
+
+Update the README so its feature summary, data-file upload list, and examples
+include both commands. State that the user provides the file path and that
+each command performs one request without polling or retrying.
