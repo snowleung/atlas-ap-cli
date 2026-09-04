@@ -1,6 +1,6 @@
 ---
 name: atlas-ap-remote
-description: Use when a user wants to submit, inspect, cancel, or download Atlas AP Remote jobs; upload Atlas data files or templates; or generate a safety assessment (安评).
+description: Use when a user wants to install or update the Atlas AP Remote CLI; submit, inspect, cancel, or download its jobs; upload Atlas data files or templates; or generate a safety assessment (安评).
 metadata:
   short-description: Operate Atlas AP Remote jobs safely
 ---
@@ -48,6 +48,22 @@ Use `--json` by default when the result will be interpreted by Codex or another 
 - `0`: success
 - `1`: command or remote failure
 - `2`: invalid usage; show or preserve the CLI usage output
+
+## Install or update the CLI
+
+When the user asks to install, update, or upgrade `atlas-ap-remote`, first read
+the current [Agent skills](https://github.com/snowleung/atlas-ap-cli#agent-skills)
+section. Treat that page and its latest-release link as the source of truth;
+do not rely on a version number or asset name cached in this skill.
+
+Run `atlas-ap-remote --version` when the executable is installed and compare it
+with the latest GitHub release. Stop without reinstalling when it is current.
+When an update is needed, follow the page's current platform instructions,
+verify the downloaded asset against its published SHA256 checksum before
+replacement, install it on `PATH`, and refresh the installed
+`atlas-ap-remote` skill as directed by the page. Obtain user authorization
+before downloading or replacing installed files. Run
+`atlas-ap-remote --version` afterward and report the verified version.
 
 ## Command routing
 
