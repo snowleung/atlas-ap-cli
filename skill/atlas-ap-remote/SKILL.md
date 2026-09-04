@@ -83,6 +83,20 @@ atlas-ap-remote --server "$ATLAS_REMOTE_URL" submit \
 
 For 安评, report the returned `job_id` clearly. Do not claim that the assessment is finished merely because submission succeeded.
 
+For `--body-parts`, pass the Chinese text value, not a numeric key. The standard reference values are:
+
+- `全身` (default)
+- `躯干部位`
+- `面部（含颈部）`
+- `手足`
+- `头部`
+- `头发`
+- `口唇`
+- `眼部`
+- `指（趾）甲`
+
+Treat this as guidance rather than a closed enum; if the user supplies another server-supported value, pass it through unchanged.
+
 ### Check a job
 
 Use one request when the user asks for the current job state:
