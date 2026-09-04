@@ -22,9 +22,10 @@ errors on stderr.
   and rejects ZIP entries that attempt to escape the output directory
   (`../escape.txt`, absolute paths, Windows-style `..\escape.txt`).
 - **JSON mode** — every command supports `--json` for scriptable use.
-- **Data-file uploads** — `material-db`, `reference-db`, `risk-db`, and
-  `special-materials-config` each upload one local file to their dedicated
-  `/data-files/...` endpoint with a single multipart POST.
+- **Data-file uploads** — `material-db`, `reference-db`, `risk-db`,
+  `special-materials-config`, `report-template`, and `safe-material-template`
+  each upload one local file to their dedicated `/data-files/...` endpoint
+  with a single multipart POST.
 
 ## Installation
 
@@ -269,10 +270,10 @@ Success envelope:
 
 ### Data-file uploads
 
-`material-db`, `reference-db`, `risk-db`, and
-`special-materials-config` each upload one local file to the matching
-Atlas Core data-file endpoint. The `--file` flag is required; the file is
-sent as a `multipart/form-data` part named `file` in a single POST
+`material-db`, `reference-db`, `risk-db`, `special-materials-config`,
+`report-template`, and `safe-material-template` each upload one local file to
+the matching Atlas Core data-file endpoint. The `--file` flag is required; the
+file is sent as a `multipart/form-data` part named `file` in a single POST
 request. The CLI does not poll or retry.
 
 ```bash
@@ -280,7 +281,14 @@ atlas-ap-remote --server https://api.example.com material-db --file ./material.d
 atlas-ap-remote --server https://api.example.com reference-db --file ./reference.db --json
 atlas-ap-remote --server https://api.example.com risk-db --file ./risk.db --json
 atlas-ap-remote --server https://api.example.com special-materials-config --file ./special-materials.json --json
+atlas-ap-remote --server https://api.example.com report-template --file './模板文件_勿删.docx' --json
+atlas-ap-remote --server https://api.example.com safe-material-template --file './配方的成分安全评估模板_勿删.docx' --json
 ```
+
+`模板文件_勿删.docx` corresponds to `report-template`, while
+`配方的成分安全评估模板_勿删.docx` corresponds to
+`safe-material-template`. The CLI preserves the supplied basename and does not
+rename the uploaded file.
 
 The service responds with an arbitrary JSON object. In JSON mode the
 object is wrapped in the standard envelope; in human mode it is printed

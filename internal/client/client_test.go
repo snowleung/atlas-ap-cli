@@ -410,6 +410,8 @@ func TestUploadDataFile_SendsMultipartToAllEndpoints(t *testing.T) {
 		"/data-files/reference-db",
 		"/data-files/risk-db",
 		"/data-files/special-materials-config",
+		"/data-files/report-template",
+		"/data-files/safe-material-template",
 	}
 
 	var (

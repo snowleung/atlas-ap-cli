@@ -5,7 +5,7 @@ import (
 	"io"
 )
 
-// printUsage writes the top-level help text to w. It describes all five
+// printUsage writes the top-level help text to w. It describes the available
 // commands, the environment-variable fallbacks, the global flags, and
 // the single-request (no polling) contract.
 func printUsage(w io.Writer) {
@@ -39,6 +39,10 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  risk-db        Upload a data file (one POST /data-files/risk-db).")
 	fmt.Fprintln(w, "  special-materials-config")
 	fmt.Fprintln(w, "                 Upload a data file (one POST /data-files/special-materials-config).")
+	fmt.Fprintln(w, "  report-template")
+	fmt.Fprintln(w, "                 Upload a data file (one POST /data-files/report-template).")
+	fmt.Fprintln(w, "  safe-material-template")
+	fmt.Fprintln(w, "                 Upload a data file (one POST /data-files/safe-material-template).")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "OUTPUT")
 	fmt.Fprintln(w, "  Each command performs exactly one HTTP request. The CLI does not poll")
