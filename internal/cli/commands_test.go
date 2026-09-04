@@ -410,6 +410,8 @@ func TestRun_DataFileCommands(t *testing.T) {
 		{"reference-db", "/data-files/reference-db"},
 		{"risk-db", "/data-files/risk-db"},
 		{"special-materials-config", "/data-files/special-materials-config"},
+		{"report-template", "/data-files/report-template"},
+		{"safe-material-template", "/data-files/safe-material-template"},
 	}
 
 	for _, tc := range commands {
