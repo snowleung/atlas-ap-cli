@@ -1,6 +1,6 @@
 ---
 name: atlas-ap-remote
-description: Use the Atlas AP Remote CLI to submit files, inspect or cancel jobs, and download results; load it for safety-assessment (安评) generation, which requires a user-provided recipe file before submission.
+description: Use when a user wants to operate Atlas AP Remote jobs, upload Atlas data files or templates, or generate a safety assessment (安评).
 metadata:
   short-description: Operate Atlas AP Remote jobs safely
 ---
@@ -88,17 +88,32 @@ Tell the user where files were extracted. Mention the ZIP path only when `--keep
 
 ### Upload a data file
 
-Four commands upload a single local data file to its dedicated Atlas Core
-endpoint: `material-db`, `reference-db`, `risk-db`, and
-`special-materials-config`. Each sends one multipart POST with a required
-`file` part; the user must provide the file path.
+Six commands upload a single local data file to its dedicated Atlas Core
+endpoint: `material-db`, `reference-db`, `risk-db`,
+`special-materials-config`, `report-template`, and `safe-material-template`.
+Each sends one multipart POST with a required `file` part; the user must
+provide the local file path.
+
+Use this exact routing for the two template files:
+
+| Source filename | Command | Endpoint |
+| --- | --- | --- |
+| `模板文件_勿删.docx` | `report-template` | `/data-files/report-template` |
+| `配方的成分安全评估模板_勿删.docx` | `safe-material-template` | `/data-files/safe-material-template` |
 
 ```bash
 atlas-ap-remote --server "$ATLAS_REMOTE_URL" material-db --file <path> --json
 atlas-ap-remote --server "$ATLAS_REMOTE_URL" reference-db --file <path> --json
 atlas-ap-remote --server "$ATLAS_REMOTE_URL" risk-db --file <path> --json
 atlas-ap-remote --server "$ATLAS_REMOTE_URL" special-materials-config --file <path> --json
+atlas-ap-remote --server "$ATLAS_REMOTE_URL" report-template --file '/path/to/模板文件_勿删.docx' --json
+atlas-ap-remote --server "$ATLAS_REMOTE_URL" safe-material-template --file '/path/to/配方的成分安全评估模板_勿删.docx' --json
 ```
+
+For a template upload, compare the source basename with the table, pass the
+user-provided path unchanged, and report a mismatch instead of guessing when
+neither basename matches. The CLI accepts other basenames and does not rename
+the uploaded file.
 
 The command does not poll or retry; it performs exactly one POST request.
 The response is an arbitrary JSON object, reported verbatim (in `--json`
