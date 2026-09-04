@@ -1,6 +1,6 @@
 ---
 name: atlas-ap-remote
-description: Use when a user wants to operate Atlas AP Remote jobs, upload Atlas data files or templates, or generate a safety assessment (安评).
+description: Use when a user wants to submit, inspect, cancel, or download Atlas AP Remote jobs; upload Atlas data files or templates; or generate a safety assessment (安评).
 metadata:
   short-description: Operate Atlas AP Remote jobs safely
 ---
