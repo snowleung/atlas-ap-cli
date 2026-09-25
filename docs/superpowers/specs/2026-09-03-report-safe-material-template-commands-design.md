@@ -112,6 +112,26 @@ the OpenAPI schema. The exact basenames above guide agent routing only; the CLI
 does not reject other names, infer a template type from file contents, or
 rename the uploaded file.
 
+### CLI update workflow
+
+The skill also handles requests to update or upgrade the installed
+`atlas-ap-remote` CLI. When that intent is present, the agent must first read
+the current [Agent skills](https://github.com/snowleung/atlas-ap-cli#agent-skills)
+section rather than relying on installation details cached in the skill.
+
+The agent follows the page's current link to the latest GitHub release,
+compares that release with `atlas-ap-remote --version`, and avoids reinstalling
+when the installed version is already current. When an update is needed, it
+uses the platform asset and checksum named by the current instructions,
+verifies SHA256 before replacement, installs the binary on `PATH`, and refreshes
+the installed skill from the repository instructions. It then runs
+`atlas-ap-remote --version` again and reports the verified installed version.
+
+The skill must not hardcode a release number or treat its own installation
+examples as authoritative update metadata. Downloading and replacing an
+installed executable or skill remains an external mutation that requires the
+usual user authorization at execution time.
+
 ## Other documentation
 
 Update the README so its feature summary, data-file upload list, and examples

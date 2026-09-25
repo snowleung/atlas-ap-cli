@@ -54,6 +54,8 @@ func TestHelpText_TopLevelDataFiles(t *testing.T) {
 		"public-material-catalog", "/data-files/public-material-catalog",
 		"public-onsale-material", "/data-files/public-onsale-material",
 		"public-iccsa-material", "/data-files/public-iccsa-material",
+		"report-template", "/data-files/report-template",
+		"safe-material-template", "/data-files/safe-material-template",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("top-level help missing %q\n---\n%s", want, out)
@@ -64,7 +66,17 @@ func TestHelpText_TopLevelDataFiles(t *testing.T) {
 // TestHelpText_DataFile requires the command-specific usage to mention the
 // command name, --file, --json, --help, and the single-POST contract.
 func TestHelpText_DataFile(t *testing.T) {
-	for _, command := range []string{"material-db", "reference-db", "risk-db", "special-materials-config", "public-material-catalog", "public-onsale-material", "public-iccsa-material"} {
+	for _, command := range []string{
+		"material-db",
+		"reference-db",
+		"risk-db",
+		"special-materials-config",
+		"report-template",
+		"safe-material-template",
+		"public-material-catalog",
+		"public-onsale-material",
+		"public-iccsa-material",
+	} {
 		var buf bytes.Buffer
 		printDataFileUsage(&buf, command)
 		out := buf.String()
@@ -98,6 +110,16 @@ func TestHelpText_Submit(t *testing.T) {
 		"--file",
 		"--cos-type",
 		"--body-parts",
+		"Chinese text",
+		"全身",
+		"躯干部位",
+		"面部（含颈部）",
+		"手足",
+		"头部",
+		"头发",
+		"口唇",
+		"眼部",
+		"指（趾）甲",
 		"--product-name",
 		"--usage-method",
 		"--json",

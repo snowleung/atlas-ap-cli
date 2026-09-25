@@ -266,3 +266,9 @@ Full `go test ./... -count=1`, `go vet ./...`, help smoke checks, and
 and Go cache access; no live upload was performed. Skill routing was manually
 reviewed for the scenarios above, consistent with the requested inline execution.
 The repository skill is updated; separately installed copies remain unchanged.
+
+Before PR creation, merged `origin/main` at `ce7d928`. Upstream had added the
+report-template and safe-material-template commands. Resolved overlapping
+command lists, tests, help, README, and skill text by retaining both sets of
+commands and the upstream installation/update guidance. The integrated result
+supports nine data-file commands. Post-merge tests, vet, and build passed.

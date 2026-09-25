@@ -196,7 +196,7 @@ git commit -m "docs: document template upload commands"
 Replace the frontmatter description with this single-line pointer:
 
 ```yaml
-description: Use the Atlas AP Remote CLI to submit jobs, upload data files or templates, inspect or cancel jobs, and download results; load it for safety-assessment (安评) generation, which requires a user-provided recipe file before submission.
+description: Use when a user wants to submit, inspect, cancel, or download Atlas AP Remote jobs; upload Atlas data files or templates; or generate a safety assessment (安评).
 ```
 
 This adds the data-file/template branch while retaining the existing job and
@@ -244,7 +244,80 @@ git add skill/atlas-ap-remote/SKILL.md
 git commit -m "docs: teach skill template upload routing"
 ```
 
-### Task 5: Complete verification
+### Task 5: Teach the skill to update the CLI from current instructions
+
+**Files:**
+- Modify: `skill/atlas-ap-remote/SKILL.md`
+
+- [ ] **Step 1: Run a failing skill baseline scenario**
+
+Give an independent agent the current skill and this read-only scenario:
+
+```text
+The user asks you to update the installed atlas-ap-remote CLI. Explain the
+source you will check for the latest version, how you decide whether an update
+is needed, what integrity check you perform, whether the installed skill is
+also refreshed, and how you verify completion. Do not perform the update.
+```
+
+Expected: the current skill has no update branch, so the agent cannot derive
+all required decisions from it—especially checking the live Agent skills page,
+comparing installed/latest versions, and refreshing the installed skill.
+
+- [ ] **Step 2: Add the minimal update workflow**
+
+Extend the frontmatter trigger with CLI installation and update intent, then
+add this section after `## Configuration and safety`:
+
+```markdown
+## Install or update the CLI
+
+When the user asks to install, update, or upgrade `atlas-ap-remote`, first read
+the current [Agent skills](https://github.com/snowleung/atlas-ap-cli#agent-skills)
+section. Treat that page and its latest-release link as the source of truth;
+do not rely on a version number or asset name cached in this skill.
+
+Run `atlas-ap-remote --version` when the executable is installed and compare it
+with the latest GitHub release. Stop without reinstalling when it is current.
+When an update is needed, follow the page's current platform instructions,
+verify the downloaded asset against its published SHA256 checksum before
+replacement, install it on `PATH`, and refresh the installed
+`atlas-ap-remote` skill as directed by the page. Obtain user authorization
+before downloading or replacing installed files. Run
+`atlas-ap-remote --version` afterward and report the verified version.
+```
+
+Use this updated frontmatter description:
+
+```yaml
+description: Use when a user wants to install or update the Atlas AP Remote CLI; submit, inspect, cancel, or download its jobs; upload Atlas data files or templates; or generate a safety assessment (安评).
+```
+
+- [ ] **Step 3: Validate and forward-test the updated skill**
+
+Run:
+
+```bash
+python3 /Users/hans/.codex/skills/.system/skill-creator/scripts/quick_validate.py skill/atlas-ap-remote
+```
+
+Then rerun the exact scenario from Step 1 with an independent agent reading
+the modified skill.
+
+Expected: the skill validator succeeds, and the agent identifies the Agent
+skills page as live source of truth, checks `atlas-ap-remote --version`, follows
+the page to the latest release, skips an unnecessary reinstall, otherwise
+verifies SHA256 before replacement, refreshes the installed skill, obtains
+authorization for mutations, and verifies the installed version afterward.
+
+- [ ] **Step 4: Commit the skill workflow**
+
+```bash
+git add skill/atlas-ap-remote/SKILL.md
+git commit -m "docs: teach skill CLI update workflow"
+```
+
+### Task 6: Complete verification
 
 **Files:**
 - No source changes expected.
@@ -290,4 +363,5 @@ git log --oneline --decorate -8
 ```
 
 Confirm the feature changes are limited to the two command mappings, table
-coverage, help, README, bundled skill, and the approved design/plan documents.
+coverage, help, README, bundled skill routing/update workflows, and the
+approved design/plan documents.

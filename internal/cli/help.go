@@ -5,7 +5,7 @@ import (
 	"io"
 )
 
-// printUsage writes the top-level help text to w. It describes all five
+// printUsage writes the top-level help text to w. It describes the available
 // commands, the environment-variable fallbacks, the global flags, and
 // the single-request (no polling) contract.
 func printUsage(w io.Writer) {
@@ -45,6 +45,10 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "                 Upload a public resource (one POST /data-files/public-onsale-material).")
 	fmt.Fprintln(w, "  public-iccsa-material")
 	fmt.Fprintln(w, "                 Upload a public resource (one POST /data-files/public-iccsa-material).")
+	fmt.Fprintln(w, "  report-template")
+	fmt.Fprintln(w, "                 Upload a data file (one POST /data-files/report-template).")
+	fmt.Fprintln(w, "  safe-material-template")
+	fmt.Fprintln(w, "                 Upload a data file (one POST /data-files/safe-material-template).")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "OUTPUT")
 	fmt.Fprintln(w, "  Each command performs exactly one HTTP request. The CLI does not poll")
@@ -64,6 +68,18 @@ func printSubmitUsage(w io.Writer) {
 	fmt.Fprintln(w, "         [--usage-method METHOD]")
 	fmt.Fprintln(w, "         [--json]")
 	fmt.Fprintln(w, "         [--help]")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "Body parts")
+	fmt.Fprintln(w, "  --body-parts accepts Chinese text (default: 全身). Reference values:")
+	fmt.Fprintln(w, "    全身")
+	fmt.Fprintln(w, "    躯干部位")
+	fmt.Fprintln(w, "    面部（含颈部）")
+	fmt.Fprintln(w, "    手足")
+	fmt.Fprintln(w, "    头部")
+	fmt.Fprintln(w, "    头发")
+	fmt.Fprintln(w, "    口唇")
+	fmt.Fprintln(w, "    眼部")
+	fmt.Fprintln(w, "    指（趾）甲")
 }
 
 func printStatusUsage(w io.Writer) {

@@ -65,6 +65,10 @@ func Run(args []string, stdout, stderr io.Writer, environ []string) int {
 		return cmdDataFile(gf, environ, "public-onsale-material", "/data-files/public-onsale-material", subArgs, stdout, stderr)
 	case "public-iccsa-material":
 		return cmdDataFile(gf, environ, "public-iccsa-material", "/data-files/public-iccsa-material", subArgs, stdout, stderr)
+	case "report-template":
+		return cmdDataFile(gf, environ, "report-template", "/data-files/report-template", subArgs, stdout, stderr)
+	case "safe-material-template":
+		return cmdDataFile(gf, environ, "safe-material-template", "/data-files/safe-material-template", subArgs, stdout, stderr)
 	default:
 		fmt.Fprintf(stderr, "unknown command: %s\n", subcmd)
 		return 2

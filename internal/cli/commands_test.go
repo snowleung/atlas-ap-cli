@@ -414,6 +414,8 @@ func TestRun_DataFileCommands(t *testing.T) {
 		{"public-material-catalog", "/data-files/public-material-catalog"},
 		{"public-onsale-material", "/data-files/public-onsale-material"},
 		{"public-iccsa-material", "/data-files/public-iccsa-material"},
+		{"report-template", "/data-files/report-template"},
+		{"safe-material-template", "/data-files/safe-material-template"},
 	}
 
 	for _, tc := range commands {

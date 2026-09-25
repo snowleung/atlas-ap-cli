@@ -413,6 +413,8 @@ func TestUploadDataFile_SendsMultipartToAllEndpoints(t *testing.T) {
 		"/data-files/public-material-catalog",
 		"/data-files/public-onsale-material",
 		"/data-files/public-iccsa-material",
+		"/data-files/report-template",
+		"/data-files/safe-material-template",
 	}
 
 	var (

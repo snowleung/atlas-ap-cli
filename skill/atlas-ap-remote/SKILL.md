@@ -1,6 +1,6 @@
 ---
 name: atlas-ap-remote
-description: Use when the user wants to submit, inspect, cancel, or download Atlas AP Remote jobs, upload data files or public resources, or generate safety assessments (安评).
+description: Use when a user wants to install or update the Atlas AP Remote CLI; submit, inspect, cancel, or download its jobs; upload Atlas data files, templates, or public resources; or generate a safety assessment (安评).
 metadata:
   short-description: Operate Atlas jobs and upload data files
 ---
@@ -49,6 +49,22 @@ Use `--json` by default when the result will be interpreted by Codex or another 
 - `1`: command or remote failure
 - `2`: invalid usage; show or preserve the CLI usage output
 
+## Install or update the CLI
+
+When the user asks to install, update, or upgrade `atlas-ap-remote`, first read
+the current [Agent skills](https://github.com/snowleung/atlas-ap-cli#agent-skills)
+section. Treat that page and its latest-release link as the source of truth;
+do not rely on a version number or asset name cached in this skill.
+
+Run `atlas-ap-remote --version` when the executable is installed and compare it
+with the latest GitHub release. Stop without reinstalling when it is current.
+When an update is needed, follow the page's current platform instructions,
+verify the downloaded asset against its published SHA256 checksum before
+replacement, install it on `PATH`, and refresh the installed
+`atlas-ap-remote` skill as directed by the page. Obtain user authorization
+before downloading or replacing installed files. Run
+`atlas-ap-remote --version` afterward and report the verified version.
+
 ## Command routing
 
 ### Submit a file
@@ -66,6 +82,20 @@ atlas-ap-remote --server "$ATLAS_REMOTE_URL" submit \
 ```
 
 For 安评, report the returned `job_id` clearly. Do not claim that the assessment is finished merely because submission succeeded.
+
+For `--body-parts`, pass the Chinese text value, not a numeric key. The standard reference values are:
+
+- `全身` (default)
+- `躯干部位`
+- `面部（含颈部）`
+- `手足`
+- `头部`
+- `头发`
+- `口唇`
+- `眼部`
+- `指（趾）甲`
+
+Treat this as guidance rather than a closed enum; if the user supplies another server-supported value, pass it through unchanged.
 
 ### Check a job
 
@@ -88,18 +118,33 @@ Tell the user where files were extracted. Mention the ZIP path only when `--keep
 
 ### Upload a data file
 
-Seven commands upload a single local data file to its dedicated Atlas Core
+Nine commands upload a single local data file to its dedicated Atlas Core
 endpoint: `material-db`, `reference-db`, `risk-db`,
-`special-materials-config`, `public-material-catalog`,
-`public-onsale-material`, and `public-iccsa-material`. Each sends one multipart
-POST with a required `file` part; the user must provide the file path.
+`special-materials-config`, `report-template`, `safe-material-template`,
+`public-material-catalog`, `public-onsale-material`, and `public-iccsa-material`.
+Each sends one multipart POST with a required `file` part; the user must
+provide the local file path.
+
+Use this exact routing for the two template files:
+
+| Source filename | Command | Endpoint |
+| --- | --- | --- |
+| `模板文件_勿删.docx` | `report-template` | `/data-files/report-template` |
+| `配方的成分安全评估模板_勿删.docx` | `safe-material-template` | `/data-files/safe-material-template` |
 
 ```bash
 atlas-ap-remote --server "$ATLAS_REMOTE_URL" material-db --file <path> --json
 atlas-ap-remote --server "$ATLAS_REMOTE_URL" reference-db --file <path> --json
 atlas-ap-remote --server "$ATLAS_REMOTE_URL" risk-db --file <path> --json
 atlas-ap-remote --server "$ATLAS_REMOTE_URL" special-materials-config --file <path> --json
+atlas-ap-remote --server "$ATLAS_REMOTE_URL" report-template --file '/path/to/模板文件_勿删.docx' --json
+atlas-ap-remote --server "$ATLAS_REMOTE_URL" safe-material-template --file '/path/to/配方的成分安全评估模板_勿删.docx' --json
 ```
+
+For a template upload, compare the source basename with the table, pass the
+user-provided path unchanged, and report a mismatch instead of guessing when
+neither basename matches. The CLI accepts other basenames and does not rename
+the uploaded file.
 
 The command does not poll or retry; it performs exactly one POST request.
 The response is an arbitrary JSON object, reported verbatim (in `--json`
