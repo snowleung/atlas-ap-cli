@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"strings"
+	"sync/atomic"
 	"testing"
 )
 
@@ -410,6 +411,9 @@ func TestRun_DataFileCommands(t *testing.T) {
 		{"reference-db", "/data-files/reference-db"},
 		{"risk-db", "/data-files/risk-db"},
 		{"special-materials-config", "/data-files/special-materials-config"},
+		{"public-material-catalog", "/data-files/public-material-catalog"},
+		{"public-onsale-material", "/data-files/public-onsale-material"},
+		{"public-iccsa-material", "/data-files/public-iccsa-material"},
 		{"report-template", "/data-files/report-template"},
 		{"safe-material-template", "/data-files/safe-material-template"},
 	}
@@ -575,4 +579,102 @@ func writeTempFile(t *testing.T, content string) string {
 		t.Fatalf("close: %v", err)
 	}
 	return f.Name()
+}
+
+func TestRun_PublicResourceContract(t *testing.T) {
+	resources := []struct{ command, filename string }{
+		{"public-material-catalog", "已使用化妆品原料目录.xlsx"},
+		{"public-onsale-material", "已上市产品原料使用信息.xlsx"},
+		{"public-iccsa-material", "《国际化妆品安全评估数据索引》.xlsx"},
+	}
+	for _, resource := range resources {
+		t.Run(resource.command, func(t *testing.T) {
+			var out, errOut bytes.Buffer
+			if code := Run([]string{resource.command, "--help"}, &out, &errOut, nil); code != 0 || !strings.Contains(out.String(), "--file") {
+				t.Fatalf("help: code=%d stdout=%s stderr=%s", code, &out, &errOut)
+			}
+			for _, jsonMode := range []bool{false, true} {
+				for _, status := range []int{200, 404, 413} {
+					var requests atomic.Int32
+					errorCode := "DATA_FILE_NOT_FOUND"
+					if status == 413 {
+						errorCode = "UPLOAD_TOO_LARGE"
+					}
+					srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						requests.Add(1)
+						if r.Method != http.MethodPost || r.URL.Path != "/data-files/"+resource.command {
+							t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+						}
+						if r.Header.Get("Authorization") != "Bearer test-token" {
+							t.Error("missing auth")
+						}
+						w.Header().Set("Content-Type", "application/json")
+						w.WriteHeader(status)
+						if status != 200 {
+							_ = json.NewEncoder(w).Encode(map[string]any{"code": errorCode, "message": "upload rejected"})
+							return
+						}
+						_ = json.NewEncoder(w).Encode(map[string]any{
+							"file_type": resource.command, "filename": resource.filename,
+							"size": 7, "applied_at": "2026-09-26T12:00:00+08:00", "extra": true,
+						})
+					}))
+					t.Cleanup(srv.Close)
+					environ := []string{"ATLAS_REMOTE_URL=" + srv.URL, "ATLAS_REMOTE_TOKEN=test-token"}
+					out.Reset()
+					errOut.Reset()
+					code := Run([]string{resource.command, "--json"}, &out, &errOut, environ)
+					if code != 1 || !strings.Contains(out.String(), "MISSING_ARG") || requests.Load() != 0 {
+						t.Fatalf("missing file: code=%d output=%s requests=%d", code, &out, requests.Load())
+					}
+					args := []string{resource.command, "--file", writeTempFile(t, "payload")}
+					if jsonMode {
+						args = append(args, "--json")
+					}
+					out.Reset()
+					errOut.Reset()
+					code = Run(args, &out, &errOut, environ)
+					srv.Close()
+					if requests.Load() != 1 {
+						t.Fatalf("requests=%d", requests.Load())
+					}
+					if status != 200 {
+						if code != 1 || !strings.Contains(out.String()+errOut.String(), errorCode) {
+							t.Fatalf("error: code=%d stdout=%s stderr=%s", code, &out, &errOut)
+						}
+						if jsonMode {
+							var result map[string]any
+							if err := json.Unmarshal(out.Bytes(), &result); err != nil {
+								t.Fatal(err)
+							}
+							if result["http_status"] != float64(status) || result["success"] != false || result["message"] != "upload rejected" {
+								t.Fatalf("error envelope: %v", result)
+							}
+						}
+						continue
+					}
+					if code != 0 {
+						t.Fatalf("code=%d stderr=%s", code, &errOut)
+					}
+					var result map[string]any
+					if err := json.Unmarshal(out.Bytes(), &result); err != nil {
+						t.Fatal(err)
+					}
+					if jsonMode {
+						if result["success"] != true {
+							t.Fatalf("envelope: %v", result)
+						}
+						response, ok := result["response"].(map[string]any)
+						if !ok {
+							t.Fatalf("missing response: %v", result)
+						}
+						result = response
+					}
+					if result["file_type"] != resource.command || result["filename"] != resource.filename || result["size"] != float64(7) || result["applied_at"] != "2026-09-26T12:00:00+08:00" || result["extra"] != true {
+						t.Fatalf("response: %v", result)
+					}
+				}
+			}
+		})
+	}
 }

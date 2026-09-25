@@ -59,6 +59,12 @@ func Run(args []string, stdout, stderr io.Writer, environ []string) int {
 		return cmdDataFile(gf, environ, "risk-db", "/data-files/risk-db", subArgs, stdout, stderr)
 	case "special-materials-config":
 		return cmdDataFile(gf, environ, "special-materials-config", "/data-files/special-materials-config", subArgs, stdout, stderr)
+	case "public-material-catalog":
+		return cmdDataFile(gf, environ, "public-material-catalog", "/data-files/public-material-catalog", subArgs, stdout, stderr)
+	case "public-onsale-material":
+		return cmdDataFile(gf, environ, "public-onsale-material", "/data-files/public-onsale-material", subArgs, stdout, stderr)
+	case "public-iccsa-material":
+		return cmdDataFile(gf, environ, "public-iccsa-material", "/data-files/public-iccsa-material", subArgs, stdout, stderr)
 	case "report-template":
 		return cmdDataFile(gf, environ, "report-template", "/data-files/report-template", subArgs, stdout, stderr)
 	case "safe-material-template":

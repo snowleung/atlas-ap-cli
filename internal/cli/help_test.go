@@ -40,7 +40,7 @@ func TestHelpText_TopLevel(t *testing.T) {
 }
 
 // TestHelpText_TopLevelDataFiles requires the top-level help to list all
-// six data-file commands alongside their endpoints.
+// supported data-file commands alongside their endpoints.
 func TestHelpText_TopLevelDataFiles(t *testing.T) {
 	var buf bytes.Buffer
 	printUsage(&buf)
@@ -51,6 +51,9 @@ func TestHelpText_TopLevelDataFiles(t *testing.T) {
 		"reference-db", "/data-files/reference-db",
 		"risk-db", "/data-files/risk-db",
 		"special-materials-config", "/data-files/special-materials-config",
+		"public-material-catalog", "/data-files/public-material-catalog",
+		"public-onsale-material", "/data-files/public-onsale-material",
+		"public-iccsa-material", "/data-files/public-iccsa-material",
 		"report-template", "/data-files/report-template",
 		"safe-material-template", "/data-files/safe-material-template",
 	} {
@@ -70,6 +73,9 @@ func TestHelpText_DataFile(t *testing.T) {
 		"special-materials-config",
 		"report-template",
 		"safe-material-template",
+		"public-material-catalog",
+		"public-onsale-material",
+		"public-iccsa-material",
 	} {
 		var buf bytes.Buffer
 		printDataFileUsage(&buf, command)
