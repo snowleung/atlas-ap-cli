@@ -1,6 +1,6 @@
 # Public Resource Upload Commands Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Support three public-resource uploads in the CLI and its repository skill.
 
@@ -31,7 +31,7 @@ The checkout currently implements four data-file commands. These three bring the
 
 **Modify:** `internal/cli/commands_test.go`, `internal/cli/help_test.go`, `internal/client/client_test.go`.
 
-- [ ] Add these rows to `TestRun_DataFileCommands`:
+- [x] Add these rows to `TestRun_DataFileCommands`:
 
 ```go
 {"public-material-catalog", "/data-files/public-material-catalog"},
@@ -39,7 +39,7 @@ The checkout currently implements four data-file commands. These three bring the
 {"public-iccsa-material", "/data-files/public-iccsa-material"},
 ```
 
-- [ ] Add these entries to `TestUploadDataFile_SendsMultipartToAllEndpoints`'s endpoint list:
+- [x] Add these entries to `TestUploadDataFile_SendsMultipartToAllEndpoints`'s endpoint list:
 
 ```go
 "/data-files/public-material-catalog",
@@ -49,7 +49,7 @@ The checkout currently implements four data-file commands. These three bring the
 
 This existing test checks the method, path, authentication, file field, basename, bytes, and arbitrary response fields. The generic client already supports these paths, so these client cases should pass before production changes.
 
-- [ ] Add the following expected strings to `TestHelpText_TopLevelDataFiles` and replace its stale “four” comment with “supported”:
+- [x] Add the following expected strings to `TestHelpText_TopLevelDataFiles` and replace its stale “four” comment with “supported”:
 
 ```go
 "public-material-catalog", "/data-files/public-material-catalog",
@@ -63,7 +63,7 @@ Append the following strings to the command list in `TestHelpText_DataFile`:
 "public-material-catalog", "public-onsale-material", "public-iccsa-material",
 ```
 
-- [ ] Add this integration test to `internal/cli/commands_test.go`; add `sync/atomic` to its imports. It verifies all public commands, environment configuration, required file/help handling, documented response fields, extra fields, and service errors with exactly one request.
+- [x] Add this integration test to `internal/cli/commands_test.go`; add `sync/atomic` to its imports. It verifies all public commands, environment configuration, required file/help handling, documented response fields, extra fields, and service errors with exactly one request.
 
 ```go
 func TestRun_PublicResourceContract(t *testing.T) {
@@ -144,13 +144,13 @@ func TestRun_PublicResourceContract(t *testing.T) {
 }
 ```
 
-- [ ] Run `go test ./internal/cli ./internal/client -run 'DataFile|PublicResource' -count=1`. Expect CLI failures for unknown public commands and missing top-level help; existing client cases pass. Resolve test compilation errors before interpreting a failure as the intended red result.
+- [x] Run `go test ./internal/cli ./internal/client -run 'DataFile|PublicResource' -count=1`. Expect CLI failures for unknown public commands and missing top-level help; existing client cases pass. Resolve test compilation errors before interpreting a failure as the intended red result.
 
 ## Task 2: Implement dispatch and help
 
 **Modify:** `internal/cli/commands.go`, `internal/cli/help.go`.
 
-- [ ] Add these cases before the command dispatch default:
+- [x] Add these cases before the command dispatch default:
 
 ```go
 case "public-material-catalog":
@@ -161,7 +161,7 @@ case "public-iccsa-material":
     return cmdDataFile(gf, environ, "public-iccsa-material", "/data-files/public-iccsa-material", subArgs, stdout, stderr)
 ```
 
-- [ ] Add top-level help lines alongside existing data-file commands:
+- [x] Add top-level help lines alongside existing data-file commands:
 
 ```go
 fmt.Fprintln(w, "  public-material-catalog")
@@ -174,15 +174,15 @@ fmt.Fprintln(w, "                 Upload a public resource (one POST /data-files
 
 Command-specific help is already provided by `cmdDataFile`; no second parser or client method is needed. Preserve the current one-request behavior and error mapping, including missing-file exit code 1, invalid syntax exit code 2, and arbitrary filenames.
 
-- [ ] Run `gofmt -w internal/cli/commands.go internal/cli/help.go internal/cli/commands_test.go internal/cli/help_test.go internal/client/client_test.go`.
-- [ ] Run `go test ./internal/cli ./internal/client -run 'DataFile|PublicResource' -count=1`. Expect PASS.
-- [ ] Commit only these five files with message `feat: support public resource uploads`.
+- [x] Run `gofmt -w internal/cli/commands.go internal/cli/help.go internal/cli/commands_test.go internal/cli/help_test.go internal/client/client_test.go`.
+- [x] Run `go test ./internal/cli ./internal/client -run 'DataFile|PublicResource' -count=1`. Expect PASS.
+- [x] Commit only these five files with message `feat: support public resource uploads`.
 
 ## Task 3: Document commands and agent routing
 
 **Modify:** `README.md`, `skill/atlas-ap-remote/SKILL.md`.
 
-- [ ] Expand README's data-file feature summary and upload list to include all seven commands. Add this subsection under its data-file usage section:
+- [x] Expand README's data-file feature summary and upload list to include all seven commands. Add this subsection under its data-file usage section:
 
 ```markdown
 ### Public resources
@@ -216,7 +216,7 @@ atlas-ap-remote --server "$ATLAS_REMOTE_URL" public-onsale-material --file './�
 atlas-ap-remote --server "$ATLAS_REMOTE_URL" public-iccsa-material --file './《国际化妆品安全评估数据索引》.xlsx' --json
 ```
 
-- [ ] Update skill frontmatter description to:
+- [x] Update skill frontmatter description to:
 
 ```yaml
 description: Use the Atlas AP Remote CLI to submit, inspect, cancel, or download jobs, upload data files or public resources, or generate safety assessments (安评) from a user-provided recipe file.
@@ -246,13 +246,23 @@ A timeout or disconnect may leave the replacement applied. Do not automatically
 retry; explain the uncertain result and let the user decide the next action.
 ```
 
-- [ ] Review these skill scenarios manually: each of the three standard filenames selects its command; `new.xlsx` without a resource asks for a resource; `new.xlsx` with explicit catalog intent uses catalog; a missing path asks for the local file; a timeout produces no automatic retry. Keep the existing assessment and job rules intact.
-- [ ] Run `git diff --check`, review README and skill for stale command counts, and commit these two files with message `docs: explain public resource uploads and skill routing`.
+- [x] Review these skill scenarios manually: each of the three standard filenames selects its command; `new.xlsx` without a resource asks for a resource; `new.xlsx` with explicit catalog intent uses catalog; a missing path asks for the local file; a timeout produces no automatic retry. Keep the existing assessment and job rules intact.
+- [x] Run `git diff --check`, review README and skill for stale command counts, and commit these two files with message `docs: explain public resource uploads and skill routing`.
 
 ## Task 4: Verify and deliver
 
-- [ ] Run `go test ./... -count=1` and `go vet ./...`. Expect both to exit successfully. Existing shared timeout/network tests cover unchanged transport behavior.
-- [ ] Run `git diff --check` and inspect `git status --short` for unintended changes.
-- [ ] Run `go run ./cmd/atlas-ap-remote --help` and `go run ./cmd/atlas-ap-remote public-material-catalog --help`. Expect the new command list and required file usage without a server request.
-- [ ] Review the branch diff against the approved spec: three mappings, shared upload behavior, output/error preservation, help, README provenance, skill routing, and test coverage.
-- [ ] Report implementation location, verification results, and any actual limitations. Do not imply the separately installed skill or a released CLI binary has been updated. No publication or live upload is part of this plan.
+- [x] Run `go test ./... -count=1` and `go vet ./...`. Expect both to exit successfully. Existing shared timeout/network tests cover unchanged transport behavior.
+- [x] Run `git diff --check` and inspect `git status --short` for unintended changes.
+- [x] Run `go run ./cmd/atlas-ap-remote --help` and `go run ./cmd/atlas-ap-remote public-material-catalog --help`. Expect the new command list and required file usage without a server request.
+- [x] Review the branch diff against the approved spec: three mappings, shared upload behavior, output/error preservation, help, README provenance, skill routing, and test coverage.
+- [x] Report implementation location, verification results, and any actual limitations. Do not imply the separately installed skill or a released CLI binary has been updated. No publication or live upload is part of this plan.
+
+## Execution results
+
+Implemented on `codex/public-resource-upload`. Baseline tests passed. New CLI
+tests failed on unknown commands before implementation and passed afterward.
+Full `go test ./... -count=1`, `go vet ./...`, help smoke checks, and
+`git diff --check` passed. Tests required sandbox escalation for local ports
+and Go cache access; no live upload was performed. Skill routing was manually
+reviewed for the scenarios above, consistent with the requested inline execution.
+The repository skill is updated; separately installed copies remain unchanged.

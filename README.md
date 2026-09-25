@@ -22,9 +22,10 @@ errors on stderr.
   and rejects ZIP entries that attempt to escape the output directory
   (`../escape.txt`, absolute paths, Windows-style `..\escape.txt`).
 - **JSON mode** — every command supports `--json` for scriptable use.
-- **Data-file uploads** — `material-db`, `reference-db`, `risk-db`, and
-  `special-materials-config` each upload one local file to their dedicated
-  `/data-files/...` endpoint with a single multipart POST.
+- **Data-file uploads** — `material-db`, `reference-db`, `risk-db`,
+  `special-materials-config`, `public-material-catalog`,
+  `public-onsale-material`, and `public-iccsa-material` each upload one local file
+  to their dedicated `/data-files/...` endpoint with a single multipart POST.
 
 ## Installation
 
@@ -269,8 +270,9 @@ Success envelope:
 
 ### Data-file uploads
 
-`material-db`, `reference-db`, `risk-db`, and
-`special-materials-config` each upload one local file to the matching
+`material-db`, `reference-db`, `risk-db`, `special-materials-config`,
+`public-material-catalog`, `public-onsale-material`, and
+`public-iccsa-material` each upload one local file to the matching
 Atlas Core data-file endpoint. The `--file` flag is required; the file is
 sent as a `multipart/form-data` part named `file` in a single POST
 request. The CLI does not poll or retry.
@@ -299,6 +301,34 @@ Human mode:
   "accepted": true,
   "count": 3
 }
+```
+
+### Public resources
+
+These commands follow Atlas Core HTTP Service v1.0.5's
+[OpenAPI description](https://ap.atlaslabtest.com/openapi.json), inspected on
+2026-09-26. Each uses Bearer authentication and one multipart POST with a
+required `file` part.
+
+| Command | Endpoint | Fixed server file |
+| --- | --- | --- |
+| `public-material-catalog` | `/data-files/public-material-catalog` | `已使用化妆品原料目录.xlsx` |
+| `public-onsale-material` | `/data-files/public-onsale-material` | `已上市产品原料使用信息.xlsx` |
+| `public-iccsa-material` | `/data-files/public-iccsa-material` | `《国际化妆品安全评估数据索引》.xlsx` |
+
+The endpoint selects the resource; the local filename can be arbitrary.
+Uploads replace an existing shared resource. The target file must already
+exist. The server's default content limit is 20 MiB and is configurable;
+proxies may impose lower limits. Supply a complete compatible workbook.
+Success confirms replacement, not validation of Excel contents. The response
+includes `file_type`, `filename`, `size`, and `applied_at`, preserved inside the
+CLI's `response` object in JSON mode. A timeout may occur after replacement;
+the CLI does not automatically retry or poll.
+
+```bash
+atlas-ap-remote --server "$ATLAS_REMOTE_URL" public-material-catalog --file './已使用化妆品原料目录.xlsx' --json
+atlas-ap-remote --server "$ATLAS_REMOTE_URL" public-onsale-material --file './已上市产品原料使用信息.xlsx' --json
+atlas-ap-remote --server "$ATLAS_REMOTE_URL" public-iccsa-material --file './《国际化妆品安全评估数据索引》.xlsx' --json
 ```
 
 ## Output and errors

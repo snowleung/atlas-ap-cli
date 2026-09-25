@@ -1,13 +1,13 @@
 ---
 name: atlas-ap-remote
-description: Use the Atlas AP Remote CLI to submit files, inspect or cancel jobs, and download results; load it for safety-assessment (安评) generation, which requires a user-provided recipe file before submission.
+description: Use when the user wants to submit, inspect, cancel, or download Atlas AP Remote jobs, upload data files or public resources, or generate safety assessments (安评).
 metadata:
-  short-description: Operate Atlas AP Remote jobs safely
+  short-description: Operate Atlas jobs and upload data files
 ---
 
 # Atlas AP Remote CLI
 
-Use this skill when the user asks to operate Atlas AP Remote or to generate an 安评/安全评估/安评报告 through this CLI.
+Use this skill when the user asks to operate Atlas AP Remote, upload data files or public resources, or generate an 安评/安全评估/安评报告 through this CLI.
 
 ## Hard gate for 安评
 
@@ -88,10 +88,11 @@ Tell the user where files were extracted. Mention the ZIP path only when `--keep
 
 ### Upload a data file
 
-Four commands upload a single local data file to its dedicated Atlas Core
-endpoint: `material-db`, `reference-db`, `risk-db`, and
-`special-materials-config`. Each sends one multipart POST with a required
-`file` part; the user must provide the file path.
+Seven commands upload a single local data file to its dedicated Atlas Core
+endpoint: `material-db`, `reference-db`, `risk-db`,
+`special-materials-config`, `public-material-catalog`,
+`public-onsale-material`, and `public-iccsa-material`. Each sends one multipart
+POST with a required `file` part; the user must provide the file path.
 
 ```bash
 atlas-ap-remote --server "$ATLAS_REMOTE_URL" material-db --file <path> --json
@@ -104,6 +105,32 @@ The command does not poll or retry; it performs exactly one POST request.
 The response is an arbitrary JSON object, reported verbatim (in `--json`
 mode as `{"success":true,"response":{...}}`). Do not assume particular
 response keys or invent upload results beyond what the server returned.
+
+#### Select a public resource
+
+Require a user-provided local file path. Use the resource or command explicitly
+selected by the user. Otherwise match the source basename exactly:
+
+| Source basename | Command |
+| --- | --- |
+| `已使用化妆品原料目录.xlsx` | `public-material-catalog` |
+| `已上市产品原料使用信息.xlsx` | `public-onsale-material` |
+| `《国际化妆品安全评估数据索引》.xlsx` | `public-iccsa-material` |
+
+When no basename matches and the user has not selected a resource, ask which
+resource they intend before uploading. Pass the provided path unchanged.
+This routing rule selects the command; the CLI accepts arbitrary filenames.
+
+These uploads replace the selected shared resource. Report the server's
+returned fields; success confirms replacement, not workbook validation.
+A timeout or disconnect may leave the replacement applied. Do not automatically
+retry; explain the uncertain result and let the user decide the next action.
+
+```bash
+atlas-ap-remote --server "$ATLAS_REMOTE_URL" public-material-catalog --file './已使用化妆品原料目录.xlsx' --json
+atlas-ap-remote --server "$ATLAS_REMOTE_URL" public-onsale-material --file './已上市产品原料使用信息.xlsx' --json
+atlas-ap-remote --server "$ATLAS_REMOTE_URL" public-iccsa-material --file './《国际化妆品安全评估数据索引》.xlsx' --json
+```
 
 ### Cancel a job
 
