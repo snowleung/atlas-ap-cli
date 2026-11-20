@@ -1,5 +1,8 @@
 # atlas-ap-remote
 
+> [!IMPORTANT]
+> This project is no longer maintained. Development has moved to **[atlas_ap_remote](https://github.com/snowleung/atlas_ap_remote)**.
+
 A single-shot command-line client for the Atlas AP Remote service, written
 in dependency-free Go and distributable as a single Windows executable
 (`atlas-ap-remote.exe`).
